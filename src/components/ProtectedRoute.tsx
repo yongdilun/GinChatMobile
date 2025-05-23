@@ -25,9 +25,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
     const currentRoute = segments.join('/');
     const inAuthGroup = segments.includes('(tabs)') || segments.includes('chat');
-    const isIndexRoute = currentRoute === '';
-    const isLoginRoute = segments.includes('login');
-    const isSignupRoute = segments.includes('signup');
+    const isIndexRoute = currentRoute === '' || currentRoute === 'index';
+    const isLoginRoute = segments.includes('login') || currentRoute === 'login';
+    const isSignupRoute = segments.includes('signup') || currentRoute === 'signup';
     const isPublicRoute = isLoginRoute || isSignupRoute || isIndexRoute;
 
     console.log('[ProtectedRoute] ---- ROUTE ANALYSIS ----');
@@ -39,6 +39,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     console.log('[ProtectedRoute] Is index route:', isIndexRoute);
     console.log('[ProtectedRoute] Is login route:', isLoginRoute);
     console.log('[ProtectedRoute] Is signup route:', isSignupRoute);
+
+    // Prevent navigation if we're currently on a form page that might be showing errors
+    if ((isLoginRoute || isSignupRoute) && !isAuthenticated) {
+      console.log('[ProtectedRoute] ✅ Unauthenticated user on auth form page, allowing access (preventing error navigation)');
+      return;
+    }
 
     if (isAuthenticated) {
       // User is authenticated

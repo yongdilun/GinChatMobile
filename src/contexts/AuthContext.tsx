@@ -66,11 +66,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Login function
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
     try {
       console.log('Attempting login...');
       const data = await authAPI.login(email, password);
       console.log('Login successful:', data.user);
+      
+      // Only set loading state AFTER successful API call, when we're actually processing login
+      setIsLoading(true);
       
       // Convert backend user data format to our format
       const userData: User = {
@@ -93,25 +95,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setTimeout(() => {
         console.log('Navigating to chats tab specifically...');
         router.replace('/(tabs)/chats');
+        setIsLoading(false);
       }, 500);
     } catch (error) {
-      console.error('Login error:', error);
+      console.log('Login failed:', error);
+      // Don't set loading state for errors - user should see immediate feedback
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   // Register function
   const register = async (name: string, email: string, password: string) => {
-    setIsLoading(true);
+    console.log('[AuthContext] Starting registration process...');
+    // Don't set isLoading for registration - only for auth state changes
     try {
-      await authAPI.register(name, email, password);
+      const response = await authAPI.register(name, email, password);
+      console.log('[AuthContext] Registration API call successful:', response);
+      return response;
     } catch (error) {
+      console.log('[AuthContext] Registration failed:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
+    // No finally block - don't touch isLoading for registration
   };
 
   // Logout function

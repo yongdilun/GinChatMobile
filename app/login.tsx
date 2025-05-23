@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -52,18 +52,18 @@ export default function LoginScreen() {
           >
             {/* Header */}
             <View style={styles.header}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.push('/')}
                 activeOpacity={0.7}
               >
                 <LinearGradient
                   colors={['rgba(255, 215, 0, 0.2)', 'rgba(255, 215, 0, 0.1)']}
                   style={styles.backButtonGradient}
-      >
+                >
                   <Ionicons name="arrow-back" size={24} color={GoldTheme.gold.primary} />
                 </LinearGradient>
-      </TouchableOpacity>
+              </TouchableOpacity>
             </View>
 
             {/* Logo Section */}
@@ -74,58 +74,58 @@ export default function LoginScreen() {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <ThemedText style={styles.logoText}>G</ThemedText>
+                <Image 
+                  source={require('../assets/adaptive-icon.png')} 
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </LinearGradient>
               
               <ThemedText style={styles.welcomeTitle}>Welcome Back</ThemedText>
               <ThemedText style={styles.welcomeSubtitle}>
                 Sign in to your premium account
               </ThemedText>
-      </View>
+            </View>
 
             {/* Form Section */}
             <View style={styles.formSection}>
-        {error ? (
+              {error ? (
                 <View style={styles.errorContainer}>
                   <Ionicons name="alert-circle" size={20} color={GoldTheme.status.error} />
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
+                  <ThemedText style={styles.errorText}>{error}</ThemedText>
                 </View>
-        ) : null}
+              ) : null}
 
               <GoldInput
                 label="Email Address"
                 placeholder="Enter your email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
                 autoComplete="email"
                 icon={<Ionicons name="mail-outline" size={20} color={GoldTheme.gold.primary} />}
-        />
+              />
 
               <GoldInput
                 label="Password"
                 placeholder="Enter your password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
                 autoComplete="password"
                 icon={<Ionicons name="lock-closed-outline" size={20} color={GoldTheme.gold.primary} />}
-        />
-
-              <TouchableOpacity style={styles.forgotPassword}>
-                <ThemedText style={styles.forgotPasswordText}>
-                  Forgot Password?
-                </ThemedText>
-              </TouchableOpacity>
-
-              <GoldButton
-                title={loading ? "Signing In..." : "Sign In"}
-          onPress={handleLogin}
-          disabled={loading}
-                size="large"
-                style={styles.loginButton}
               />
+
+              <View style={styles.loginButtonContainer}>
+                <GoldButton
+                  title={loading ? "Signing In..." : "Sign In"}
+                  onPress={handleLogin}
+                  disabled={loading}
+                  size="large"
+                  style={styles.loginButton}
+                />
+              </View>
 
               {loading && (
                 <View style={styles.loadingOverlay}>
@@ -144,11 +144,11 @@ export default function LoginScreen() {
 
               <View style={styles.signupPrompt}>
                 <ThemedText style={styles.signupText}>Don't have an account?</ThemedText>
-          <TouchableOpacity onPress={() => router.push('/signup')}>
+                <TouchableOpacity onPress={() => router.push('/signup')}>
                   <ThemedText style={styles.signupLink}>Create Account</ThemedText>
-          </TouchableOpacity>
-        </View>
-      </View>
+                </TouchableOpacity>
+              </View>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -190,18 +190,17 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
     ...GoldTheme.shadow.gold,
   },
-  logoText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: GoldTheme.text.inverse,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   welcomeTitle: {
     fontSize: 32,
@@ -236,18 +235,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     flex: 1,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 32,
-    marginTop: -8,
-  },
-  forgotPasswordText: {
-    color: GoldTheme.gold.primary,
-    fontSize: 14,
-    fontWeight: '600',
+  loginButtonContainer: {
+    width: '100%',
+    marginTop: 32,
+    marginBottom: 16,
+    alignItems: 'stretch',
   },
   loginButton: {
     marginBottom: 20,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   loadingOverlay: {
     position: 'absolute',

@@ -86,13 +86,14 @@ export const GoldButton: React.FC<GoldButtonProps> = ({
     );
   }
 
+  // Primary variant with shadow
   return (
     <TouchableOpacity
       style={[
-        styles.baseButton,
-        getButtonStyle(),
-        disabled && styles.disabledButton,
-        style,
+        styles.baseButton, 
+        styles.primaryButtonShadow, 
+        disabled && styles.disabledButton, 
+        style
       ]}
       onPress={onPress}
       disabled={disabled}
@@ -116,7 +117,6 @@ const styles = StyleSheet.create({
   baseButton: {
     borderRadius: 12,
     overflow: 'hidden',
-    ...GoldTheme.shadow.gold,
   },
   gradient: {
     justifyContent: 'center',
@@ -127,26 +127,41 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   mediumButton: {
     paddingVertical: 12,
     paddingHorizontal: 24,
     minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   largeButton: {
     paddingVertical: 16,
     paddingHorizontal: 32,
     minHeight: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   outlineButton: {
     borderWidth: 2,
     borderColor: GoldTheme.gold.primary,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   secondaryButton: {
     backgroundColor: GoldTheme.background.card,
     borderWidth: 1,
     borderColor: GoldTheme.border.gold,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   disabledButton: {
     opacity: 0.5,
@@ -168,11 +183,17 @@ const styles = StyleSheet.create({
   },
   smallText: {
     fontSize: 14,
+    lineHeight: 18,
   },
   mediumText: {
     fontSize: 16,
+    lineHeight: 20,
   },
   largeText: {
     fontSize: 18,
+    lineHeight: 22,
+  },
+  primaryButtonShadow: {
+    ...GoldTheme.shadow.gold,
   },
 }); 

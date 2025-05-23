@@ -269,8 +269,8 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
     <View style={[styles.audioPlayerContainer, isCompact && styles.audioPlayerCompact]}>
       <LinearGradient
         colors={isCompact 
-          ? ['rgba(255, 215, 0, 0.08)', 'rgba(255, 215, 0, 0.02)']
-          : ['rgba(255, 215, 0, 0.12)', 'rgba(255, 215, 0, 0.04)']}
+          ? ['rgba(50, 50, 50, 0.8)', 'rgba(30, 30, 30, 0.9)']
+          : ['rgba(45, 45, 45, 0.85)', 'rgba(25, 25, 25, 0.95)']}
         style={[styles.audioPlayerGradient, isCompact && styles.audioPlayerGradientCompact]}
       >
         {/* Audio wave visualization background */}
@@ -316,7 +316,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
             <View style={styles.audioHeader}>
               <View style={styles.audioTitleContainer}>
                 <View style={styles.audioIconWrapper}>
-                  <Ionicons name="musical-notes" size={18} color={GoldTheme.gold.primary} />
+                  <Ionicons name="musical-notes" size={18} color="#FFD700" />
                 </View>
                 <View style={styles.audioTitleText}>
                   <Text style={styles.audioTitle}>Audio Message</Text>
@@ -1572,18 +1572,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   audioPlayerContainer: {
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
-    minWidth: 320,
+    minWidth: 280,
+    maxWidth: '100%',
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
+    borderColor: 'rgba(128, 128, 128, 0.3)',
     ...GoldTheme.shadow.dark,
     position: 'relative',
   },
   audioPlayerGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
     position: 'relative',
   },
   audioWaveBackground: {
@@ -1638,7 +1639,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: 'rgba(80, 80, 80, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1649,14 +1650,14 @@ const styles = StyleSheet.create({
   audioTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: GoldTheme.text.primary,
+    color: '#FFFFFF',
     marginBottom: 2,
   },
   audioSubtitle: {
     fontSize: 12,
     fontWeight: '500',
-    color: GoldTheme.gold.primary,
-    opacity: 0.8,
+    color: '#E0E0E0',
+    opacity: 0.9,
   },
   audioProgressBar: {
     marginBottom: 8,
@@ -1702,12 +1703,12 @@ const styles = StyleSheet.create({
   },
   audioTimeText: {
     fontSize: 12,
-    color: GoldTheme.text.secondary,
+    color: '#E0E0E0',
     fontWeight: '500',
   },
   audioDurationText: {
     fontSize: 12,
-    color: GoldTheme.text.muted,
+    color: '#C0C0C0',
     fontWeight: '400',
   },
   audioDownloadButton: {
@@ -2750,7 +2751,7 @@ export default function ChatDetailScreen() {
             value={messageText}
             onChangeText={setMessageText}
             placeholder="Type a message..."
-              placeholderTextColor={GoldTheme.text.muted}
+            placeholderTextColor={GoldTheme.text.secondary}
             multiline
             maxLength={1000}
             editable={!sending && !isUploading}

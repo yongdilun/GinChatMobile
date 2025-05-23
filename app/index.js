@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, StatusBar, ActivityIndicator, Dimensions, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,7 +52,11 @@ export default function Index() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <Text style={styles.logoText}>G</Text>
+              <Image 
+                source={require('../assets/adaptive-icon.png')} 
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </LinearGradient>
           </View>
           
@@ -76,27 +80,29 @@ export default function Index() {
 
         {/* Action Buttons */}
         <View style={styles.actionSection}>
-          <GoldButton
-            title="Sign In"
-            onPress={() => router.push('/login')}
-            size="large"
-            style={styles.primaryButton}
-          />
-          
-          <GoldButton
-            title="Create Account"
-            onPress={() => router.push('/signup')}
-            variant="outline"
-            size="large"
-            style={styles.secondaryButton}
-          />
+          <View style={styles.buttonContainer}>
+            <GoldButton
+              title="Sign In"
+              onPress={() => router.push('/login')}
+              size="large"
+              style={styles.primaryButton}
+            />
+            
+            <GoldButton
+              title="Create Account"
+              onPress={() => router.push('/signup')}
+              variant="outline"
+              size="large"
+              style={styles.secondaryButton}
+            />
+          </View>
           
           <View style={styles.featureHints}>
             <Text style={styles.featureText}>✨ Real-time messaging</Text>
             <Text style={styles.featureText}>🔐 Secure & encrypted</Text>
           </View>
-      </View>
-    </SafeAreaView>
+        </View>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
@@ -146,17 +152,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logoGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
     ...GoldTheme.shadow.gold,
   },
-  logoText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: GoldTheme.text.inverse,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   title: {
     fontSize: 42,
@@ -207,12 +212,24 @@ const styles = StyleSheet.create({
   },
   actionSection: {
     paddingBottom: 20,
+    paddingTop: 40,
+  },
+  buttonContainer: {
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+    marginBottom: 16,
+    alignItems: 'stretch',
   },
   primaryButton: {
     marginBottom: 16,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   secondaryButton: {
     marginBottom: 32,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   featureHints: {
     alignItems: 'center',

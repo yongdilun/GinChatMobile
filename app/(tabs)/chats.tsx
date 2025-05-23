@@ -969,27 +969,33 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '90%',
     maxWidth: 400,
+    backgroundColor: GoldTheme.background.card,
     borderRadius: 20,
     overflow: 'hidden',
     ...GoldTheme.shadow.gold,
+    paddingVertical: 8,
+    alignSelf: 'center',
   },
   modalGradient: {
     padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.2)',
+    alignItems: 'stretch',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: GoldTheme.text.primary,
     textAlign: 'center',
     marginBottom: 24,
   },
   modalButtons: {
-    gap: 12,
+    gap: 16,
+    marginTop: 24,
+    alignItems: 'stretch',
   },
   modalButton: {
     marginBottom: 0,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   footer: {
     marginTop: 20,
@@ -1068,13 +1074,15 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   inputContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
+    width: '100%',
   },
   // Join modal styles
   joinModalContainer: {
     width: '95%',
     maxWidth: 500,
     height: '80%',
+    backgroundColor: GoldTheme.background.card,
   },
   loadingAvailableContainer: {
     padding: 40,
@@ -1100,6 +1108,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 0, 0.1)',
+    minHeight: 80,
   },
   availableChatroomAvatar: {
     width: 50,
@@ -1117,6 +1126,7 @@ const styles = StyleSheet.create({
   },
   availableChatroomInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   availableChatroomName: {
     fontSize: 16,
@@ -1125,9 +1135,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   availableChatroomDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
+    flexDirection: 'column',
+    gap: 4,
   },
   memberInfo: {
     flexDirection: 'row',
@@ -1151,14 +1160,17 @@ const styles = StyleSheet.create({
   joinButton: {
     borderRadius: 12,
     overflow: 'hidden',
-    marginLeft: 16,
+    alignSelf: 'center',
   },
   joinButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     gap: 6,
+    minWidth: 80,
+    minHeight: 44,
   },
   joinButtonText: {
     fontSize: 14,

@@ -10,7 +10,8 @@ const API_URL = 'https://ginchat-14ry.onrender.com/api';
 
 // API error response type
 interface ApiErrorResponse {
-  message: string;
+  message?: string;
+  error?: string;
   status?: number;
   code?: string;
 }
@@ -29,23 +30,55 @@ const handleApiError = (error: unknown) => {
     }
 
     const statusCode = axiosError.response?.status;
+    const errorData = axiosError.response?.data;
 
     if (statusCode === 401) {
-      // Handle authentication errors
-      AsyncStorage.removeItem('token');
+      // Handle authentication errors - extract the actual error message from server
+      let errorMessage = 'Invalid email or password. Please try again.';
+      
+      // Try to get error message from various possible response formats
+      if (errorData?.message) {
+        errorMessage = errorData.message;
+      } else if (errorData?.error) {
+        errorMessage = errorData.error;
+      } else if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      }
+      
+      // Check if this is a login attempt (no stored token) vs session expired
+      AsyncStorage.getItem('token').then(token => {
+        if (!token) {
+          // This is likely a login failure - don't clear token as there isn't one
+          return;
+        } else {
+          // This is a session expiry - clear the expired token
+          AsyncStorage.removeItem('token');
+        }
+      });
+      
       return Promise.reject({
         status: 'unauthorized',
-        message: 'Your session has expired. Please login again.'
+        message: errorMessage
       });
+    }
+
+    // Handle other status codes
+    let errorMessage = 'An error occurred';
+    if (errorData?.message) {
+      errorMessage = errorData.message;
+    } else if (errorData?.error) {
+      errorMessage = errorData.error;
+    } else if (typeof errorData === 'string') {
+      errorMessage = errorData;
     }
 
     return Promise.reject({
       status: statusCode,
-      message: axiosError.response?.data?.message || 'An error occurred'
+      message: errorMessage
     });
   }
 
-  console.error('Unknown API Error:', error);
+  console.log('Unknown API Error:', error);
   return Promise.reject({
     status: 'unknown',
     message: 'An unknown error occurred'
@@ -79,6 +112,18 @@ api.interceptors.request.use(
   }
 );
 
+// Add response interceptor to handle errors consistently
+api.interceptors.response.use(
+  (response) => {
+    // Just return successful responses
+    return response;
+  },
+  (error) => {
+    // Use our handleApiError function for all API errors
+    return handleApiError(error);
+  }
+);
+
 // Authentication API calls
 export const authAPI = {
   login: async (email: string, password: string) => {
@@ -94,16 +139,28 @@ export const authAPI = {
       console.log('User data stored in AsyncStorage');
       return response.data;
     } catch (error) {
-      console.error('Login API error:', error);
+      console.log('Login API failed:', error);
       throw error;
     }
   },
 
   register: async (name: string, email: string, password: string) => {
     try {
-      const response = await api.post('/auth/register', { name, email, password });
+      console.log('[API] Making registration request to:', `${API_URL}/auth/register`);
+      console.log('[API] Registration data:', { username: name, email, password: '[HIDDEN]' });
+      
+      const response = await api.post('/auth/register', { username: name, email, password });
+      
+      console.log('[API] Registration successful, status:', response.status);
+      console.log('[API] Registration response data:', response.data);
+      
       return response.data;
     } catch (error) {
+      console.log('[API] Registration failed:', error);
+      if (axios.isAxiosError(error)) {
+        console.log('[API] Registration error status:', error.response?.status);
+        console.log('[API] Registration error data:', error.response?.data);
+      }
       throw error;
     }
   },
