@@ -42,8 +42,20 @@ export function MessageActions({
   // Only show actions for user's own messages
   const canModify = message.sender_id === currentUserId;
 
+  console.log('[MessageActions] Component rendered:', {
+    messageId: message.id,
+    isVisible,
+    canModify,
+    senderId: message.sender_id,
+    currentUserId,
+    showEditModal
+  });
+
   const handleEdit = () => {
+    console.log('[MessageActions] Edit button pressed');
+    console.log('[MessageActions] Setting showEditModal to true');
     setShowEditModal(true);
+    console.log('[MessageActions] Calling onClose');
     onClose();
   };
 
@@ -241,7 +253,7 @@ export function MessageActions({
                   title={isEditing ? 'Saving...' : 'Save'}
                   onPress={handleSaveEdit}
                   style={styles.editButton}
-                  disabled={isEditing || !editText.trim()}
+                  disabled={isEditing || (!editText.trim() && !editMediaUrl.trim())}
                 />
               </View>
             </LinearGradient>

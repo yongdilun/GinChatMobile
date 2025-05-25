@@ -545,7 +545,11 @@ function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; m
 
               <TouchableOpacity
                 style={styles.headerButton}
-                onPress={() => setShowChatroomActions(true)}
+                onPress={() => {
+                  console.log('[Chat] Three-dot menu pressed');
+                  console.log('[Chat] setShowChatroomActions function:', typeof setShowChatroomActions);
+                  setShowChatroomActions(true);
+                }}
                 activeOpacity={0.8}
               >
                 <Ionicons
@@ -2636,9 +2640,16 @@ export default function ChatDetailScreen() {
   };
 
   const handleMessageLongPress = (message: Message) => {
+    console.log('[Chat] Message long pressed:', message.id);
+    console.log('[Chat] Message sender_id:', message.sender_id, 'User ID:', user?.id);
+    console.log('[Chat] Can modify:', message.sender_id === user?.id);
+
     if (message.sender_id === user?.id) {
+      console.log('[Chat] Setting selected message and showing actions');
       setSelectedMessage(message);
       setShowMessageActions(true);
+    } else {
+      console.log('[Chat] Cannot modify message - not the sender');
     }
   };
 
