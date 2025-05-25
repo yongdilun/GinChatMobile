@@ -35,7 +35,7 @@ const handleApiError = (error: unknown) => {
     if (statusCode === 401) {
       // Handle authentication errors - extract the actual error message from server
       let errorMessage = 'Invalid email or password. Please try again.';
-      
+
       // Try to get error message from various possible response formats
       if (errorData?.message) {
         errorMessage = errorData.message;
@@ -44,7 +44,7 @@ const handleApiError = (error: unknown) => {
       } else if (typeof errorData === 'string') {
         errorMessage = errorData;
       }
-      
+
       // Check if this is a login attempt (no stored token) vs session expired
       AsyncStorage.getItem('token').then(token => {
         if (!token) {
@@ -55,7 +55,7 @@ const handleApiError = (error: unknown) => {
           AsyncStorage.removeItem('token');
         }
       });
-      
+
       return Promise.reject({
         status: 'unauthorized',
         message: errorMessage
@@ -148,12 +148,12 @@ export const authAPI = {
     try {
       console.log('[API] Making registration request to:', `${API_URL}/auth/register`);
       console.log('[API] Registration data:', { username: name, email, password: '[HIDDEN]' });
-      
+
       const response = await api.post('/auth/register', { username: name, email, password });
-      
+
       console.log('[API] Registration successful, status:', response.status);
       console.log('[API] Registration response data:', response.data);
-      
+
       return response.data;
     } catch (error) {
       console.log('[API] Registration failed:', error);
@@ -168,7 +168,7 @@ export const authAPI = {
   logout: async () => {
     console.log('=== API LOGOUT PROCESS STARTED ===');
     console.log('[API] Timestamp:', new Date().toISOString());
-    
+
     try {
       // Step 1: Check token availability
       console.log('[API] STEP 1: Checking authentication token...');
@@ -178,28 +178,28 @@ export const authAPI = {
         console.log('[API] Token length:', token.length);
         console.log('[API] Token preview:', token.substring(0, 20) + '...');
       }
-      
+
       // Step 2: Make server logout request
       console.log('[API] STEP 2: Making server logout request...');
       console.log('[API] Request URL:', `${API_URL}/auth/logout`);
       console.log('[API] Request method: POST');
       console.log('[API] Authorization header will be set by interceptor');
-      
+
       const startTime = Date.now();
       const response = await api.post('/auth/logout');
       const endTime = Date.now();
-      
+
       console.log('[API] ✅ Server logout successful!');
       console.log('[API] Response status:', response.status);
       console.log('[API] Response time:', endTime - startTime, 'ms');
       console.log('[API] Response headers:', response.headers);
       console.log('[API] Response data:', response.data);
-      
+
     } catch (error) {
       console.warn('=== API LOGOUT SERVER REQUEST FAILED ===');
       console.warn('[API] ⚠️ Server logout failed, continuing with local logout');
       console.warn('[API] Error type:', typeof error);
-      
+
       if (axios.isAxiosError(error)) {
         console.warn('[API] Axios error details:');
         console.warn('[API] - Status:', error.response?.status);
@@ -208,7 +208,7 @@ export const authAPI = {
         console.warn('[API] - Request URL:', error.config?.url);
         console.warn('[API] - Request method:', error.config?.method);
         console.warn('[API] - Request headers:', error.config?.headers);
-        
+
         if (error.code) {
           console.warn('[API] - Error code:', error.code);
         }
@@ -230,23 +230,23 @@ export const authAPI = {
       console.log('[API] Removing token from AsyncStorage...');
       await AsyncStorage.removeItem('token');
       console.log('[API] ✅ Token removed from AsyncStorage');
-      
+
       console.log('[API] Removing user from AsyncStorage...');
       await AsyncStorage.removeItem('user');
       console.log('[API] ✅ User removed from AsyncStorage');
-      
+
       // Verify storage is cleared
       const remainingToken = await AsyncStorage.getItem('token');
       const remainingUser = await AsyncStorage.getItem('user');
       console.log('[API] Verification - remaining token:', remainingToken);
       console.log('[API] Verification - remaining user:', remainingUser);
-      
+
       console.log('[API] ✅ Local storage cleared successfully');
     } catch (storageError) {
       console.error('[API] ❌ Failed to clear local storage:', storageError);
       throw storageError; // Re-throw to let caller handle
     }
-    
+
     console.log('=== API LOGOUT PROCESS COMPLETED ===');
   },
 
@@ -276,6 +276,8 @@ export interface Message {
   text_content?: string;
   media_url?: string;
   sent_at: string;
+  edited?: boolean;  // Whether message has been edited
+  edited_at?: string;  // When message was last edited
 }
 
 export interface ChatroomMember {
@@ -287,6 +289,8 @@ export interface ChatroomMember {
 export interface Chatroom {
   id: string;  // MongoDB ObjectID as string
   name: string;
+  room_code: string;  // 6-digit join code
+  has_password: boolean;  // Whether room has password protection
   created_by: number;  // uint in backend
   created_at: string;
   members: ChatroomMember[];
@@ -314,9 +318,9 @@ export const mediaAPI = {
       if (!fileName) {
         // Generate filename based on timestamp if not provided
         const timestamp = new Date().getTime();
-        const extension = file.type === 'image/jpeg' || file.type === 'image/jpg' ? 'jpg' : 
+        const extension = file.type === 'image/jpeg' || file.type === 'image/jpg' ? 'jpg' :
                           file.type === 'image/png' ? 'png' :
-                          file.type === 'video/mp4' ? 'mp4' : 
+                          file.type === 'video/mp4' ? 'mp4' :
                           file.type === 'audio/mpeg' ? 'mp3' : 'bin';
         fileName = `upload_${timestamp}.${extension}`;
       }
@@ -330,28 +334,28 @@ export const mediaAPI = {
       // Handle data URIs - Convert Base64 to Blob
       let fileBlob;
       let fileUri = file.uri;
-      
+
       if (fileUri.startsWith('data:')) {
         // Parse the data URI to get MIME type and Base64 data
         const match = fileUri.match(/^data:([^;]+);base64,(.+)$/);
-        
+
         if (!match) {
           throw new Error('Invalid data URI format');
         }
-        
+
         const mimeType = match[1] || file.type;
         const base64Data = match[2];
-        
+
         // Convert base64 to binary
         const binaryString = atob(base64Data);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-        
+
         // Create blob from binary data
         fileBlob = new Blob([bytes], { type: mimeType });
-        
+
         // For React Native, we need a URI, not a blob
         // Since we're in web mode, we can use URL.createObjectURL
         fileUri = URL.createObjectURL(fileBlob);
@@ -386,7 +390,7 @@ export const mediaAPI = {
           name: fileName
         } as any);
       }
-      
+
       // Add message_type parameter
       formData.append('message_type', messageType);
 
@@ -399,7 +403,7 @@ export const mediaAPI = {
           ...(Platform.OS !== 'web' ? { 'Content-Type': 'multipart/form-data' } : {})
         }
       });
-      
+
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -447,7 +451,7 @@ export const chatAPI = {
     }
   },
 
- 
+
 
   getConversationById: async (id: string): Promise<{ chatroom: Chatroom }> => {
     try {
@@ -569,6 +573,57 @@ export const chatAPI = {
       }
       // Return empty array to avoid crashes
       return { messages: [] };
+    }
+  },
+
+  updateMessage: async (conversationId: string, messageId: string, updates: {
+    text_content?: string;
+    media_url?: string;
+  }) => {
+    try {
+      console.log(`[API] Updating message ${messageId} in conversation ${conversationId}:`, updates);
+      const response = await api.put(`/chatrooms/${conversationId}/messages/${messageId}`, updates);
+      console.log('[API] Message updated successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] Failed to update message:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('[API] Error status:', error.response?.status);
+        console.error('[API] Error data:', error.response?.data);
+      }
+      throw error;
+    }
+  },
+
+  deleteMessage: async (conversationId: string, messageId: string) => {
+    try {
+      console.log(`[API] Deleting message ${messageId} from conversation ${conversationId}`);
+      const response = await api.delete(`/chatrooms/${conversationId}/messages/${messageId}`);
+      console.log('[API] Message deleted successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] Failed to delete message:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('[API] Error status:', error.response?.status);
+        console.error('[API] Error data:', error.response?.data);
+      }
+      throw error;
+    }
+  },
+
+  deleteChatroom: async (chatroomId: string) => {
+    try {
+      console.log(`[API] Deleting chatroom ${chatroomId}`);
+      const response = await api.delete(`/chatrooms/${chatroomId}`);
+      console.log('[API] Chatroom deleted successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] Failed to delete chatroom:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('[API] Error status:', error.response?.status);
+        console.error('[API] Error data:', error.response?.data);
+      }
+      throw error;
     }
   },
 };

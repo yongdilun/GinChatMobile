@@ -43,55 +43,63 @@
 
 ## 🌟 Overview
 
-GinChat Mobile is a premium messaging application that provides a luxurious chat experience with real-time communication, multimedia support, and elegant UI design. Built with modern React Native and Expo technologies, it offers both functionality and aesthetic appeal.
+GinChat Mobile is a premium messaging application that provides a luxurious chat experience with real-time communication, multimedia support, and elegant UI design. Built with modern React Native and Expo technologies, it offers both functionality and aesthetic appeal with professional-grade features.
 
 ### 🎯 Key Highlights
 
-- **Premium Design**: Gold-themed UI with beautiful gradients and shadows
-- **Real-time Messaging**: Instant communication with WebSocket integration
-- **Multimedia Support**: Text, images, audio, and video messages
-- **Secure Authentication**: JWT-based auth with protected routing
-- **Cross-Platform**: Works seamlessly on iOS, Android, and web
-- **Modern Architecture**: Clean code with TypeScript and context-based state management
+- **Premium Design**: Gold-themed UI with beautiful gradients, shadows, and animations
+- **Real-time Messaging**: Instant communication with optimized WebSocket integration
+- **Rich Multimedia Support**: Text, images, audio, video messages with advanced media players
+- **Secure Authentication**: JWT-based auth with protected routing and session management
+- **Cross-Platform Excellence**: Works seamlessly on iOS, Android, and web platforms
+- **Modern Architecture**: Clean TypeScript code with context-based state management
+- **Professional Features**: Message read status, typing indicators, media galleries
+- **Production Ready**: Deployed and connected to live backend infrastructure
 
 ---
 
 ## ✨ Features
 
 ### 💬 **Core Messaging**
-- **Real-time Chat**: Instant messaging with WebSocket technology
-- **Group Conversations**: Create and join chat rooms
-- **Message Types**: Support for text, images, audio, and video
-- **Message Status**: Delivery and read indicators
-- **Media Gallery**: Browse shared media in conversations
+- **Real-time Chat**: Instant messaging with optimized WebSocket technology
+- **Group Conversations**: Create and join chat rooms with room codes and passwords
+- **Rich Message Types**: Support for text, images, audio, video, and combined media
+- **Message Status**: Advanced delivery and read indicators with blue ticks
+- **Media Gallery**: Browse shared media with full-screen viewers and download options
+- **Audio Messages**: Professional audio player with waveform visualization
+- **Video Support**: Inline video playback with controls and download functionality
 
 ### 🔐 **Authentication & Security**
-- **Secure Login**: JWT token-based authentication
-- **User Registration**: Complete signup flow with validation
-- **Protected Routes**: Automatic navigation based on auth status
-- **Session Management**: Automatic token refresh and logout
-- **Input Validation**: Comprehensive form validation
+- **Secure Login**: JWT token-based authentication with automatic refresh
+- **User Registration**: Complete signup flow with comprehensive validation
+- **Protected Routes**: Intelligent navigation based on authentication status
+- **Session Management**: Persistent sessions with secure token storage
+- **Input Validation**: Real-time form validation with user-friendly error messages
+- **API Security**: Secure communication with hosted backend infrastructure
 
 ### 🎨 **Premium UI/UX**
-- **Gold Theme**: Luxurious gold-themed design system
-- **Adaptive Components**: Responsive design components
-- **Smooth Animations**: Beautiful transitions and interactions
-- **Dark/Light Support**: Elegant theme variations
-- **Custom Components**: Reusable UI elements (GoldButton, GoldInput)
+- **Gold Theme**: Luxurious gold-themed design system with dynamic gradients
+- **Adaptive Components**: Responsive design components for all screen sizes
+- **Smooth Animations**: Beautiful transitions, loading states, and micro-interactions
+- **Professional Design**: WhatsApp-inspired interface with premium aesthetics
+- **Custom Components**: Reusable UI elements (GoldButton, GoldInput, AudioPlayer)
+- **Visual Feedback**: Loading spinners, progress bars, and status indicators
 
 ### 📱 **Mobile Experience**
-- **Cross-Platform**: iOS, Android, and web support
-- **Offline Capability**: Local storage and sync
-- **Push Notifications**: Real-time message notifications
-- **Media Handling**: Image/video capture and file selection
-- **Keyboard Optimization**: Smart keyboard avoidance
+- **Cross-Platform**: Native iOS, Android, and web support with Expo
+- **Media Handling**: Advanced image/video capture, file selection, and processing
+- **Keyboard Optimization**: Smart keyboard avoidance and input management
+- **Touch Interactions**: Optimized touch targets and gesture handling
+- **Performance**: Smooth scrolling, efficient rendering, and memory management
+- **Accessibility**: Screen reader support and keyboard navigation
 
 ### 🛠️ **Developer Experience**
-- **TypeScript**: Full type safety and IntelliSense
-- **Hot Reload**: Fast development with Expo
-- **Component Library**: Reusable design system
-- **Error Boundaries**: Graceful error handling
-- **Debugging Tools**: Comprehensive logging and debugging
+- **TypeScript**: Full type safety with comprehensive interfaces and IntelliSense
+- **Hot Reload**: Fast development with Expo development tools
+- **Component Library**: Modular, reusable design system architecture
+- **Error Boundaries**: Graceful error handling with fallback UI components
+- **Debugging Tools**: Comprehensive logging, WebSocket monitoring, and dev tools
+- **Code Quality**: ESLint, Prettier, and TypeScript strict mode configuration
 
 ---
 
@@ -99,8 +107,8 @@ GinChat Mobile is a premium messaging application that provides a luxurious chat
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/GinChatMobile.git
-cd GinChatMobile
+git clone https://github.com/yourusername/GinChat.git
+cd GinChat/GinChatMoible
 
 # Install dependencies
 npm install
@@ -112,6 +120,10 @@ npm start
 npm run android    # Android emulator
 npm run ios        # iOS simulator
 npm run web        # Web browser
+
+# Alternative development modes
+npm run start-tunnel    # For external network access
+npm run start-host      # For local network devices
 ```
 
 ---
@@ -137,8 +149,8 @@ npm run web        # Web browser
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/GinChatMobile.git
-   cd GinChatMobile
+   git clone https://github.com/yourusername/GinChat.git
+   cd GinChat/GinChatMoible
    ```
 
 2. **Install Dependencies**
@@ -150,8 +162,10 @@ npm run web        # Web browser
 
 3. **Environment Configuration**
    ```bash
-   # Create environment configuration
-   cp .env.example .env.local
+   # The app is pre-configured to use the hosted backend
+   # No additional environment setup required
+   # Backend URL: https://ginchat-14ry.onrender.com/api
+   # WebSocket URL: wss://ginchat-14ry.onrender.com/api/ws
    ```
 
 4. **Start Development Server**
@@ -165,6 +179,7 @@ npm run web        # Web browser
    - **Android**: Press `a` or `npm run android`
    - **iOS**: Press `i` or `npm run ios`
    - **Web**: Press `w` or `npm run web`
+   - **Physical Device**: Scan QR code with Expo Go app
 
 ### 🌐 Network Configuration
 
@@ -293,7 +308,7 @@ The app uses a sophisticated routing protection system that automatically handle
 // Automatic navigation logic
 useEffect(() => {
   if (isLoading) return; // Wait for auth check
-  
+
   if (isAuthenticated) {
     if (isPublicRoute) {
       router.replace('/(tabs)/chats'); // Redirect to chats
@@ -418,7 +433,7 @@ App Navigation (Expo Router)
 
 #### 🏠 **Index Screen** (`app/index.js`)
 - **Purpose**: Welcome page with app introduction
-- **Features**: 
+- **Features**:
   - Elegant logo display with adaptive-icon.png
   - Call-to-action buttons (Sign In / Create Account)
   - Responsive design with gold theme
@@ -480,19 +495,19 @@ The app integrates with a RESTful backend API with comprehensive error handling 
 #### 🛠️ API Configuration
 
 ```typescript
-// Base configuration
+// Production backend configuration
 const API_URL = 'https://ginchat-14ry.onrender.com/api';
 const api = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 20000 // 20 seconds for hosted services
+  timeout: 20000 // Extended timeout for hosted services
 });
 ```
 
 #### 🔐 Authentication Interceptors
 
 ```typescript
-// Automatic token injection
+// Automatic token injection for all requests
 api.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem('token');
   if (token) {
@@ -501,10 +516,10 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Error handling with token cleanup
+// Comprehensive error handling with automatic token cleanup
 api.interceptors.response.use(
   (response) => response,
-  (error) => handleApiError(error)
+  (error) => handleApiError(error) // Handles 401, network errors, etc.
 );
 ```
 
@@ -524,9 +539,10 @@ api.interceptors.response.use(
 | Endpoint | Method | Purpose | Request | Response |
 |----------|--------|---------|---------|----------|
 | `/chatrooms` | GET | List all rooms | - | `{chatrooms[]}` |
-| `/chatrooms/user` | GET | User's rooms | - | `{chatrooms[]}` |
-| `/chatrooms` | POST | Create room | `{name}` | `{chatroom}` |
-| `/chatrooms/:id/join` | POST | Join room | - | `{success}` |
+| `/chatrooms/user` | GET | User's joined rooms | - | `{chatrooms[]}` |
+| `/chatrooms` | POST | Create room | `{name, password?}` | `{chatroom}` |
+| `/chatrooms/search` | POST | Search by code | `{room_code}` | `{chatroom}` |
+| `/chatrooms/:id/join` | POST | Join room | `{password?}` | `{success}` |
 | `/chatrooms/:id/messages` | GET | Get messages | `?page&limit` | `{messages[]}` |
 | `/chatrooms/:id/messages` | POST | Send message | `{message_type, text_content?, media_url?}` | `{message}` |
 
@@ -534,7 +550,15 @@ api.interceptors.response.use(
 
 | Endpoint | Method | Purpose | Request | Response |
 |----------|--------|---------|---------|----------|
-| `/media/upload` | POST | Upload file | `FormData{file, message_type}` | `{url, type}` |
+| `/media/upload` | POST | Upload media | `FormData{file, message_type}` | `{url, type}` |
+
+#### 🔍 **Read Status API**
+
+| Endpoint | Method | Purpose | Request | Response |
+|----------|--------|---------|---------|----------|
+| `/messages/:id/read` | POST | Mark as read | - | `{success}` |
+| `/chatrooms/:id/read-all` | POST | Mark all read | - | `{success}` |
+| `/chatrooms/:id/unread-count` | GET | Get unread count | - | `{count}` |
 
 ### 🔄 Error Handling
 
@@ -548,7 +572,7 @@ const handleApiError = (error: AxiosError) => {
   }
 
   const { status, data } = error.response;
-  
+
   if (status === 401) {
     // Handle authentication errors
     AsyncStorage.removeItem('token');
@@ -562,29 +586,117 @@ const handleApiError = (error: AxiosError) => {
 };
 ```
 
-### 📊 Message Types
+### 📊 Message Types & Data Models
 
 ```typescript
-export type MessageType = 
-  | 'text' 
-  | 'picture' 
-  | 'audio' 
-  | 'video' 
-  | 'text_and_picture' 
-  | 'text_and_audio' 
+export type MessageType =
+  | 'text'
+  | 'picture'
+  | 'audio'
+  | 'video'
+  | 'text_and_picture'
+  | 'text_and_audio'
   | 'text_and_video';
 
 export interface Message {
-  id: string;
-  chatroom_id: string;
-  sender_id: number;
-  sender_name: string;
-  message_type: MessageType;
-  text_content?: string;
-  media_url?: string;
-  sent_at: string;
+  id: string;                    // MongoDB ObjectID
+  chatroom_id: string;          // MongoDB ObjectID
+  sender_id: number;            // User ID
+  sender_name: string;          // Display name
+  message_type: MessageType;    // Message content type
+  text_content?: string;        // Text content (optional)
+  media_url?: string;          // Cloudinary URL (optional)
+  sent_at: string;             // ISO timestamp
+}
+
+export interface Chatroom {
+  id: string;                   // MongoDB ObjectID
+  name: string;                 // Room display name
+  room_code: string;           // 6-digit join code
+  password?: string;           // Optional password
+  created_by: number;          // Creator user ID
+  created_at: string;          // ISO timestamp
+  members: ChatroomMember[];   // Member list
+  last_message?: {             // Latest message preview
+    content: string;
+    timestamp: string;
+    sender_id: number;
+  };
 }
 ```
+
+---
+
+## 🆕 Recent Updates & Current Status
+
+### 🎯 **Latest Features (December 2024)**
+
+#### ✅ **Production Ready Application**
+- **Live Backend Integration**: Connected to hosted backend at `ginchat-14ry.onrender.com`
+- **Real-time WebSocket**: Optimized WebSocket connection with automatic reconnection
+- **Media Storage**: Cloudinary integration for image, audio, and video storage
+- **Professional UI**: WhatsApp-inspired interface with gold premium theme
+
+#### ✅ **Advanced Messaging Features**
+- **Rich Media Support**: Text, images, audio, video with professional players
+- **Audio Messages**: Waveform visualization, playback controls, download functionality
+- **Video Support**: Inline playback with full-screen mode and download options
+- **Message Status**: Read receipts with blue tick indicators
+- **Real-time Updates**: Instant message delivery and status synchronization
+
+#### ✅ **Enhanced Chat Management**
+- **Room Codes**: 6-digit codes for easy room joining
+- **Password Protection**: Optional password-protected rooms
+- **Member Management**: View room members and join status
+- **Media Gallery**: Browse shared images, videos, and audio files
+- **Search & Filter**: Find rooms and messages efficiently
+
+#### ✅ **Mobile-First Design**
+- **Cross-Platform**: Native iOS, Android, and web support
+- **Responsive UI**: Adaptive layouts for all screen sizes
+- **Touch Optimized**: Gesture handling and touch interactions
+- **Performance**: Smooth animations and efficient rendering
+- **Accessibility**: Screen reader support and keyboard navigation
+
+### 🔧 **Technical Achievements**
+
+#### **Architecture & Performance**
+- **TypeScript**: Full type safety with comprehensive interfaces
+- **Context API**: Efficient state management with React Context
+- **WebSocket Service**: Singleton pattern with connection pooling
+- **Error Boundaries**: Graceful error handling and recovery
+- **Memory Management**: Optimized component lifecycle and cleanup
+
+#### **Development Experience**
+- **Hot Reload**: Fast development with Expo tools
+- **Code Quality**: ESLint, Prettier, and TypeScript strict mode
+- **Component Library**: Modular, reusable design system
+- **Debugging Tools**: Comprehensive logging and monitoring
+- **Build System**: Optimized builds for all platforms
+
+### 📊 **Current Status**
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Authentication** | ✅ Complete | JWT with secure token management |
+| **Real-time Messaging** | ✅ Complete | WebSocket with auto-reconnection |
+| **Media Support** | ✅ Complete | Images, audio, video with players |
+| **Room Management** | ✅ Complete | Create, join, search with codes |
+| **Mobile UI** | ✅ Complete | Professional design system |
+| **Cross-Platform** | ✅ Complete | iOS, Android, Web support |
+| **Production Deploy** | ✅ Complete | Connected to live backend |
+| **Performance** | ✅ Optimized | Smooth animations and rendering |
+
+### 🚀 **Ready for Production**
+
+The GinChat Mobile application is **production-ready** with:
+- ✅ **Complete feature set** with professional messaging capabilities
+- ✅ **Live backend integration** with hosted infrastructure
+- ✅ **Cross-platform support** for iOS, Android, and web
+- ✅ **Professional UI/UX** with premium design system
+- ✅ **Real-time functionality** with optimized WebSocket implementation
+- ✅ **Media handling** with cloud storage and advanced players
+- ✅ **Security features** with JWT authentication and protected routes
 
 ---
 
@@ -662,27 +774,35 @@ GinChatMobile/
 
 ## ⚙️ Configuration
 
-### 🌍 Environment Variables
+### 🌍 Environment Configuration
 
-Create a `.env.local` file in the root directory:
+The app is pre-configured for production use with hosted backend services:
+
+```typescript
+// Pre-configured API endpoints (no .env file needed)
+const API_URL = 'https://ginchat-14ry.onrender.com/api';
+const WS_URL = 'wss://ginchat-14ry.onrender.com/api/ws';
+
+// Automatic configuration
+const api = axios.create({
+  baseURL: API_URL,
+  timeout: 20000, // Extended timeout for hosted services
+  headers: { 'Content-Type': 'application/json' }
+});
+```
+
+#### 🔧 **Development Configuration**
+
+For local development or custom backend:
 
 ```bash
-# API Configuration
-API_URL=https://ginchat-14ry.onrender.com/api
-API_TIMEOUT=20000
+# Optional: Create .env.local for custom configuration
+API_URL=http://localhost:8080/api          # Local backend
+WS_URL=ws://localhost:8080/api/ws          # Local WebSocket
 
-# WebSocket Configuration
-WS_URL=wss://ginchat-14ry.onrender.com
-WS_RECONNECT_INTERVAL=5000
-
-# Feature Flags
-ENABLE_PUSH_NOTIFICATIONS=true
-ENABLE_FILE_ENCRYPTION=true
-ENABLE_DEBUG_LOGGING=false
-
-# Development Settings
-DEBUG_MODE=false
-LOG_LEVEL=info
+# Or use tunnel for external access
+API_URL=https://your-tunnel-url.com/api    # Tunnel URL
+WS_URL=wss://your-tunnel-url.com/api/ws    # Tunnel WebSocket
 ```
 
 ### 📱 App Configuration (`app.json`)
@@ -690,47 +810,42 @@ LOG_LEVEL=info
 ```json
 {
   "expo": {
-    "name": "GinChat Mobile",
-    "slug": "ginchat-mobile",
+    "name": "GinChatMobile",
+    "slug": "GinChatMobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/adaptive-icon.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "scheme": "ginchatmobile",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1a1a1a"
+      "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.ginchat.mobile"
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1a1a1a"
+        "backgroundColor": "#ffffff"
       },
-      "package": "com.ginchat.mobile"
+      "package": "com.yongdidi.GinChatMobile"
     },
     "web": {
-      "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "enableProguardInReleaseBuilds": true
-          }
-        }
-      ]
+      "expo-router"
     ],
-    "experiments": {
-      "typedRoutes": true
-    }
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ed9112c0-dcb5-44d5-abf9-2f85fc7baf6c"
+      }
+    },
+    "owner": "yongdidi"
   }
 }
 ```
@@ -769,14 +884,27 @@ module.exports = config;
     "ios": "expo start --ios --clear",
     "web": "expo start --web --clear",
     "lint": "expo lint",
-    "check:ts": "tsc --noEmit",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "build:android": "eas build --platform android",
-    "build:ios": "eas build --platform ios",
-    "build:all": "eas build --platform all"
+    "check:ts": "tsc --noEmit"
   }
 }
+```
+
+#### 🚀 **Development Commands**
+
+```bash
+# Start development server
+npm start                    # Standard development mode
+npm run start-host          # Network access for physical devices
+npm run start-tunnel        # Tunnel mode for external access
+
+# Platform-specific development
+npm run android             # Android emulator/device
+npm run ios                 # iOS simulator/device
+npm run web                 # Web browser
+
+# Code quality
+npm run lint                # Run ESLint
+npm run check:ts            # TypeScript type checking
 ```
 
 ---
@@ -808,7 +936,7 @@ describe('GoldButton', () => {
     const { getByText } = render(
       <GoldButton title="Test Button" onPress={mockOnPress} />
     );
-    
+
     fireEvent.press(getByText('Test Button'));
     expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
@@ -826,7 +954,7 @@ describe('AuthAPI', () => {
       token: 'mock-token',
       user: { id: 1, name: 'Test User' }
     };
-    
+
     // Mock API call
     jest.spyOn(global, 'fetch').mockResolvedValueOnce({
       ok: true,
@@ -1456,17 +1584,24 @@ SOFTWARE.
 
 ## 🙏 Acknowledgments
 
-- **[Expo Team](https://expo.dev/)** - For the amazing development platform
-- **[React Native Community](https://reactnative.dev/)** - For the robust framework
-- **[React Navigation](https://reactnavigation.org/)** - For navigation solutions
-- **All Contributors** - For making this project better
+- **[Expo Team](https://expo.dev/)** - For the amazing cross-platform development platform
+- **[React Native Community](https://reactnative.dev/)** - For the robust mobile framework
+- **[Expo Router](https://expo.github.io/router/)** - For file-based navigation system
+- **[Cloudinary](https://cloudinary.com/)** - For media storage and processing
+- **[Render](https://render.com/)** - For reliable backend hosting
+- **[TypeScript](https://www.typescriptlang.org/)** - For type safety and developer experience
+- **All Contributors** - For making this project a professional messaging solution
 
 ---
 
 <div align="center">
 
-**Built with ❤️ using React Native & Expo**
+**🌟 GinChat Mobile - Premium Messaging Experience 🌟**
+
+**Built with ❤️ using React Native, Expo & TypeScript**
+
+*Production-ready • Cross-platform • Real-time • Professional*
 
 [⬆ Back to Top](#-ginchat-mobile---premium-messaging-experience)
 
-</div> 
+</div>

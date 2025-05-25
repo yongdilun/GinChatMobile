@@ -27,6 +27,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWebSocket, WebSocketMessage as WSMessage } from '@/contexts/WebSocketContext';
 import { GoldTheme } from '../../constants/GoldTheme';
 import { GoldButton } from '../../src/components/GoldButton';
+import { MessageActions } from '../../src/components/MessageActions';
+import { ChatroomActions } from '../../src/components/ChatroomActions';
 import { Video, ResizeMode, Audio, AVPlaybackStatus } from 'expo-av';
 
 import * as FileSystem from 'expo-file-system';
@@ -72,10 +74,10 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
   // Wave animation effect
   useEffect(() => {
     let animationInterval: ReturnType<typeof setInterval>;
-    
+
     if (isPlaying) {
       animationInterval = setInterval(() => {
-        setWaveAnimationValues(prev => 
+        setWaveAnimationValues(prev =>
           prev.map(() => Math.random() * 0.7 + 0.3)
         );
       }, 150);
@@ -96,7 +98,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
       setDuration(status.durationMillis || 0);
       setIsPlaying(status.isPlaying || false);
       setAudioError(false);
-      
+
       if (status.didJustFinish) {
         setIsPlaying(false);
         setPosition(0);
@@ -112,7 +114,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
 
   const playSound = async () => {
     if (audioError) return;
-    
+
     setIsLoading(true);
     try {
       if (sound) {
@@ -124,7 +126,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
       } else {
         const { sound: newSound } = await Audio.Sound.createAsync(
           { uri },
-          { 
+          {
             shouldPlay: true,
             volume: 1.0,
             rate: 1.0,
@@ -132,7 +134,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
           },
           onPlaybackStatusUpdate
         );
-        
+
         setSound(newSound);
       }
     } catch (error) {
@@ -161,13 +163,13 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
       Alert.alert('Error', 'No audio URL available');
       return;
     }
-    
+
     try {
       setIsDownloading(true);
-      
+
       // Create filename
       const filename = uri.split('/').pop()?.split('?')[0] || `audio-${Date.now()}.mp3`;
-      
+
       if (Platform.OS === 'web') {
         // Web platform - direct download
         try {
@@ -181,7 +183,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
           link.click();
           document.body.removeChild(link);
           window.URL.revokeObjectURL(url);
-          
+
           Alert.alert('Success', 'Audio file has been downloaded');
         } catch (error) {
           throw new Error('Failed to download audio file for web');
@@ -194,12 +196,12 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
           Alert.alert('Permission Required', 'Please allow access to save audio files to your device');
           return;
         }
-        
+
         const localPath = `${FileSystem.documentDirectory}${filename}`;
-        
+
         console.log('Downloading audio from:', uri);
         console.log('Saving to:', localPath);
-        
+
         // Download the file
         const downloadResumable = FileSystem.createDownloadResumable(
           uri,
@@ -210,18 +212,18 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
             console.log('Audio download progress:', Math.round(progress * 100) + '%');
           }
         );
-        
+
         const downloadResult = await downloadResumable.downloadAsync();
-        
+
         if (downloadResult && downloadResult.uri) {
           console.log('Audio download completed:', downloadResult.uri);
-          
+
           // Save to device gallery
           const asset = await MediaLibrary.saveToLibraryAsync(downloadResult.uri);
           console.log('Audio saved to gallery:', asset);
-          
+
           Alert.alert(
-            'Success', 
+            'Success',
             'Audio has been saved to your device',
             [{ text: 'OK' }]
           );
@@ -229,11 +231,11 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
           throw new Error('Download failed - no file created');
         }
       }
-      
+
     } catch (error) {
       console.error('Audio download error:', error);
       Alert.alert(
-        'Download Failed', 
+        'Download Failed',
         `Could not download audio: ${error instanceof Error ? error.message : 'Unknown error'}`,
         [{ text: 'OK' }]
       );
@@ -268,7 +270,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
   return (
     <View style={[styles.audioPlayerContainer, isCompact && styles.audioPlayerCompact]}>
       <LinearGradient
-        colors={isCompact 
+        colors={isCompact
           ? ['rgba(50, 50, 50, 0.8)', 'rgba(30, 30, 30, 0.9)']
           : ['rgba(45, 45, 45, 0.85)', 'rgba(25, 25, 25, 0.95)']}
         style={[styles.audioPlayerGradient, isCompact && styles.audioPlayerGradientCompact]}
@@ -276,23 +278,23 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
         {/* Audio wave visualization background */}
         <View style={[styles.audioWaveBackground, isCompact && styles.audioWaveBackgroundCompact]}>
           {waveAnimationValues.map((height, index) => (
-            <View 
+            <View
               key={index}
               style={[
-                styles.audioWaveBar, 
-                { 
-                  height: isCompact 
+                styles.audioWaveBar,
+                {
+                  height: isCompact
                     ? Math.max(3, height * (isPlaying ? 12 : 6))
                     : Math.max(6, height * (isPlaying ? 22 : 8)),
                   opacity: isPlaying ? height : 0.3
                 }
-              ]} 
+              ]}
             />
           ))}
         </View>
-        
-        <TouchableOpacity 
-          onPress={playSound} 
+
+        <TouchableOpacity
+          onPress={playSound}
           style={[styles.audioPlayButton, isCompact && styles.audioPlayButtonCompact]}
           disabled={isLoading || audioError}
         >
@@ -301,16 +303,16 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
             style={[styles.audioButtonGradient, isCompact && styles.audioButtonGradientCompact]}
           >
             <View style={styles.playButtonIcon}>
-              <Ionicons 
-                name={isLoading ? 'hourglass-outline' : isPlaying ? 'pause' : 'play'} 
-                size={isCompact ? 16 : 22} 
-                color={GoldTheme.text.inverse} 
+              <Ionicons
+                name={isLoading ? 'hourglass-outline' : isPlaying ? 'pause' : 'play'}
+                size={isCompact ? 16 : 22}
+                color={GoldTheme.text.inverse}
                 style={{ marginLeft: isPlaying || isLoading ? 0 : 2 }}
               />
             </View>
           </LinearGradient>
         </TouchableOpacity>
-        
+
         <View style={styles.audioInfoContainer}>
           {!isCompact && (
             <View style={styles.audioHeader}>
@@ -325,8 +327,8 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
                   </Text>
                 </View>
               </View>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 onPress={handleDownload}
                 disabled={isDownloading}
                 style={styles.audioDownloadButton}
@@ -344,7 +346,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
               </TouchableOpacity>
             </View>
           )}
-          
+
           {isCompact && (
             <View style={styles.audioHeader}>
               <View style={styles.audioTitleText}>
@@ -355,8 +357,8 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
                   {isPlaying ? '♪ Playing' : isLoading ? 'Loading...' : 'Audio'}
                 </Text>
               </View>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 onPress={handleDownload}
                 disabled={isDownloading}
                 style={[styles.audioDownloadButton, { marginLeft: 8 }]}
@@ -374,10 +376,10 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
               </TouchableOpacity>
             </View>
           )}
-          
+
           {!isCompact && (
             <View style={styles.audioProgressBar}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.audioProgressBarContainer}
                 onPress={(event) => {
                   if (duration > 0) {
@@ -394,7 +396,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
                   <LinearGradient
                     colors={GoldTheme.gradients.goldButton}
                     style={[
-                      styles.audioProgress, 
+                      styles.audioProgress,
                       { width: `${Math.max(0, Math.min(100, progress * 100))}%` }
                     ]}
                   />
@@ -403,10 +405,10 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
               </TouchableOpacity>
             </View>
           )}
-          
+
           {isCompact && (
             <View style={[styles.audioProgressBar, { marginBottom: 4 }]}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.audioProgressBarContainer, { paddingVertical: 4 }]}
                 onPress={(event) => {
                   if (duration > 0) {
@@ -422,7 +424,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
                   <LinearGradient
                     colors={GoldTheme.gradients.goldButton}
                     style={[
-                      styles.audioProgress, 
+                      styles.audioProgress,
                       { width: `${Math.max(0, Math.min(100, progress * 100))}%` }
                     ]}
                   />
@@ -431,7 +433,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
               </TouchableOpacity>
             </View>
           )}
-          
+
           {!isCompact && (
             <View style={styles.audioTimeContainer}>
               <View style={styles.audioTimeWrapper}>
@@ -443,7 +445,7 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
                   {formatTime(duration)}
                 </Text>
               </View>
-              
+
               <View style={styles.audioQualityBadge}>
                 <Text style={styles.audioQualityText}>HQ</Text>
               </View>
@@ -470,7 +472,7 @@ function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; m
   }
 
   const members = chatroom.members || [];
-  
+
   const getGoldGradient = (name: string) => {
     const colors = [
       ['#FFD700', '#FFA500'] as const,
@@ -540,12 +542,24 @@ function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; m
                     color={GoldTheme.gold.primary}
                 />
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={() => setShowChatroomActions(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="ellipsis-vertical"
+                  size={20}
+                  color={GoldTheme.gold.primary}
+                />
+              </TouchableOpacity>
             </View>
           </View>
         </View>
         </SafeAreaView>
       </LinearGradient>
-      
+
       {showContent && (
         <View style={styles.headerPanel}>
           <LinearGradient
@@ -553,47 +567,47 @@ function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; m
             style={styles.headerPanelGradient}
           >
           <View style={styles.tabRow}>
-              <TouchableOpacity 
-                style={[styles.tabButton, activeTab === 'members' && styles.tabActive]} 
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === 'members' && styles.tabActive]}
                 onPress={() => setActiveTab('members')}
               >
-                <Ionicons 
-                  name="people-outline" 
-                  size={18} 
-                  color={activeTab === 'members' ? GoldTheme.gold.primary : GoldTheme.text.muted} 
+                <Ionicons
+                  name="people-outline"
+                  size={18}
+                  color={activeTab === 'members' ? GoldTheme.gold.primary : GoldTheme.text.muted}
                 />
                 <Text style={[styles.tabText, activeTab === 'members' && styles.tabTextActive]}>Members</Text>
             </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.tabButton, activeTab === 'images' && styles.tabActive]} 
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === 'images' && styles.tabActive]}
                 onPress={() => setActiveTab('images')}
               >
-                <Ionicons 
-                  name="image-outline" 
-                  size={18} 
-                  color={activeTab === 'images' ? GoldTheme.gold.primary : GoldTheme.text.muted} 
+                <Ionicons
+                  name="image-outline"
+                  size={18}
+                  color={activeTab === 'images' ? GoldTheme.gold.primary : GoldTheme.text.muted}
                 />
                 <Text style={[styles.tabText, activeTab === 'images' && styles.tabTextActive]}>Images</Text>
             </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.tabButton, activeTab === 'videos' && styles.tabActive]} 
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === 'videos' && styles.tabActive]}
                 onPress={() => setActiveTab('videos')}
               >
-                <Ionicons 
-                  name="videocam-outline" 
-                  size={18} 
-                  color={activeTab === 'videos' ? GoldTheme.gold.primary : GoldTheme.text.muted} 
+                <Ionicons
+                  name="videocam-outline"
+                  size={18}
+                  color={activeTab === 'videos' ? GoldTheme.gold.primary : GoldTheme.text.muted}
                 />
                 <Text style={[styles.tabText, activeTab === 'videos' && styles.tabTextActive]}>Videos</Text>
             </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.tabButton, activeTab === 'audio' && styles.tabActive]} 
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === 'audio' && styles.tabActive]}
                 onPress={() => setActiveTab('audio')}
               >
-                <Ionicons 
-                  name="mic-outline" 
-                  size={18} 
-                  color={activeTab === 'audio' ? GoldTheme.gold.primary : GoldTheme.text.muted} 
+                <Ionicons
+                  name="mic-outline"
+                  size={18}
+                  color={activeTab === 'audio' ? GoldTheme.gold.primary : GoldTheme.text.muted}
                 />
                 <Text style={[styles.tabText, activeTab === 'audio' && styles.tabTextActive]}>Audio</Text>
             </TouchableOpacity>
@@ -619,7 +633,7 @@ function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; m
                   ))}
               </ScrollView>
             )}
-              
+
             {activeTab === 'images' && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScrollView}>
                   {images.length > 0 ? (
@@ -633,7 +647,7 @@ function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; m
                   )}
               </ScrollView>
             )}
-              
+
             {activeTab === 'videos' && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScrollView}>
                   {videos.length > 0 ? (
@@ -647,7 +661,7 @@ function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; m
                   )}
               </ScrollView>
             )}
-              
+
             {activeTab === 'audio' && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScrollView}>
                   {audios.length > 0 ? (
@@ -746,13 +760,13 @@ function VideoPlayer({ uri }: { uri: string }) {
 
   const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
     setPlaybackStatus(status);
-    
+
     if (status.isLoaded) {
       setVideoLoaded(true);
       setVideoError(false);
       setIsPlaying(status.isPlaying || false);
       setIsBuffering(status.isBuffering || false);
-      
+
       if (status.didJustFinish) {
         setIsPlaying(false);
         setShowControls(true);
@@ -791,7 +805,7 @@ function VideoPlayer({ uri }: { uri: string }) {
 
   const seekToPosition = async (seekPosition: number) => {
     if (!playbackStatus?.isLoaded || !videoReady) return;
-    
+
     const currentVideoRef = isFullscreen ? fullscreenVideoRef.current : videoRef.current;
     if (!currentVideoRef) return;
 
@@ -806,7 +820,7 @@ function VideoPlayer({ uri }: { uri: string }) {
 
   const handleVideoPress = () => {
     if (videoError || !videoReady) return;
-    
+
     if (showControls) {
       resetControlsTimeout();
     } else {
@@ -820,13 +834,13 @@ function VideoPlayer({ uri }: { uri: string }) {
       Alert.alert('Error', 'No video URL available');
       return;
     }
-    
+
     try {
       setIsDownloading(true);
-      
+
       // Create filename
       const filename = uri.split('/').pop()?.split('?')[0] || `video-${Date.now()}.mp4`;
-      
+
       if (Platform.OS === 'web') {
         // Web platform - direct download
         try {
@@ -840,7 +854,7 @@ function VideoPlayer({ uri }: { uri: string }) {
           link.click();
           document.body.removeChild(link);
           window.URL.revokeObjectURL(url);
-          
+
           Alert.alert('Success', 'Video file has been downloaded');
         } catch (error) {
           throw new Error('Failed to download video file for web');
@@ -853,12 +867,12 @@ function VideoPlayer({ uri }: { uri: string }) {
           Alert.alert('Permission Required', 'Please allow access to save video files to your device');
           return;
         }
-        
+
         const localPath = `${FileSystem.documentDirectory}${filename}`;
-        
+
         console.log('Downloading video from:', uri);
         console.log('Saving to:', localPath);
-        
+
         // Download the file
         const downloadResumable = FileSystem.createDownloadResumable(
           uri,
@@ -869,18 +883,18 @@ function VideoPlayer({ uri }: { uri: string }) {
             console.log('Download progress:', Math.round(progress * 100) + '%');
           }
         );
-        
+
         const downloadResult = await downloadResumable.downloadAsync();
-        
+
         if (downloadResult && downloadResult.uri) {
           console.log('Download completed:', downloadResult.uri);
-          
+
           // Save to device gallery
           const asset = await MediaLibrary.saveToLibraryAsync(downloadResult.uri);
           console.log('Saved to gallery:', asset);
-          
+
           Alert.alert(
-            'Success', 
+            'Success',
             'Video has been saved to your device gallery',
             [{ text: 'OK' }]
           );
@@ -888,11 +902,11 @@ function VideoPlayer({ uri }: { uri: string }) {
           throw new Error('Download failed - no file created');
         }
       }
-      
+
     } catch (error) {
       console.error('Video download error:', error);
       Alert.alert(
-        'Download Failed', 
+        'Download Failed',
         `Could not download video: ${error instanceof Error ? error.message : 'Unknown error'}`,
         [{ text: 'OK' }]
       );
@@ -923,7 +937,7 @@ function VideoPlayer({ uri }: { uri: string }) {
         >
           <Ionicons name="videocam-off" size={32} color={GoldTheme.text.muted} />
           <Text style={styles.videoErrorText}>Video Unavailable</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.videoActionButton}
             onPress={handleDownloadVideo}
             disabled={isDownloading}
@@ -977,7 +991,7 @@ function VideoPlayer({ uri }: { uri: string }) {
             activeOpacity={1}
           />
         )}
-        
+
         {/* Loading overlay */}
         {(!videoReady && !videoError) || isBuffering && (
           <View style={styles.videoLoadingOverlay}>
@@ -987,7 +1001,7 @@ function VideoPlayer({ uri }: { uri: string }) {
             </Text>
           </View>
         )}
-        
+
         {/* Video Controls Overlay */}
         {videoReady && showControls && !isBuffering && (
           <View style={styles.videoOverlay}>
@@ -996,19 +1010,19 @@ function VideoPlayer({ uri }: { uri: string }) {
               style={styles.videoOverlayGradient}
               pointerEvents="none"
             />
-            
+
             {/* Top Controls */}
             <View style={styles.videoTopControls}>
               <View style={styles.videoTopRightControls}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.videoActionButton}
                   onPress={() => setIsFullscreen(true)}
                   activeOpacity={0.8}
                 >
                   <Ionicons name="expand" size={20} color="#fff" />
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={styles.videoActionButton}
                   onPress={handleDownloadVideo}
                   disabled={isDownloading}
@@ -1059,7 +1073,7 @@ function VideoPlayer({ uri }: { uri: string }) {
           >
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
-          
+
           <Video
             ref={fullscreenVideoRef}
             source={{ uri }}
@@ -1896,6 +1910,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  editedIndicator: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 2,
+    opacity: 0.7,
+  },
+  ownEditedIndicator: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'right',
+  },
+  otherEditedIndicator: {
+    color: GoldTheme.text.muted,
+    textAlign: 'left',
+  },
 });
 
 export default function ChatDetailScreen() {
@@ -1908,12 +1936,17 @@ export default function ChatDetailScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const processedMessages = useRef(new Set<string>());
-  
+
   const [messageText, setMessageText] = useState<string>('');
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [selectedMedia, setSelectedMedia] = useState<SelectedMediaType | null>(null);
   const [pickingMedia, setPickingMedia] = useState<boolean>(false);
-  
+
+  // Message actions state
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [showMessageActions, setShowMessageActions] = useState(false);
+  const [showChatroomActions, setShowChatroomActions] = useState(false);
+
   const {
     connectToRoom,
     disconnectFromRoom,
@@ -1927,21 +1960,56 @@ export default function ChatDetailScreen() {
   // WebSocket message handler
     const handleIncomingMessage = (newMessage: AppWebSocketMessage | WSMessage) => {
     console.log('[Chat] Received WebSocket message:', newMessage);
-    
-    if ('data' in newMessage && newMessage.data && typeof newMessage.data === 'object') {
-      const messageData = newMessage.data as Message;
-      
-      if (messageData.id && !processedMessages.current.has(messageData.id)) {
-        processedMessages.current.add(messageData.id);
 
-          setMessages(prevMessages => {
-          const messageExists = prevMessages.some(msg => msg.id === messageData.id);
-          if (!messageExists) {
-            const updatedMessages = [messageData, ...prevMessages];
-            return updatedMessages.sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
-          }
-          return prevMessages;
-        });
+    if ('data' in newMessage && newMessage.data && typeof newMessage.data === 'object') {
+      const messageType = newMessage.type;
+
+      if (messageType === 'message_updated') {
+        // Handle message edit
+        const updatedMessage = newMessage.data as Message;
+        console.log('[Chat] Message updated:', updatedMessage);
+
+        setMessages(prevMessages =>
+          prevMessages.map(msg =>
+            msg.id === updatedMessage.id ? { ...updatedMessage, edited: true } : msg
+          )
+        );
+      } else if (messageType === 'message_deleted') {
+        // Handle message deletion
+        const { message_id } = newMessage.data as { message_id: string; chatroom_id: string };
+        console.log('[Chat] Message deleted:', message_id);
+
+        setMessages(prevMessages =>
+          prevMessages.filter(msg => msg.id !== message_id)
+        );
+      } else if (messageType === 'chatroom_deleted') {
+        // Handle chatroom deletion
+        const { chatroom_id } = newMessage.data as { chatroom_id: string };
+        console.log('[Chat] Chatroom deleted:', chatroom_id);
+
+        if (chatroom_id === chatroomId) {
+          Alert.alert(
+            'Chatroom Deleted',
+            'This chatroom has been deleted by the creator.',
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+        }
+      } else if (messageType === 'new_message' || messageType === 'chat_message') {
+        // Handle new message
+        const messageData = newMessage.data as Message;
+
+        if (messageData.id && !processedMessages.current.has(messageData.id)) {
+          processedMessages.current.add(messageData.id);
+
+            setMessages(prevMessages => {
+            const messageExists = prevMessages.some(msg => msg.id === messageData.id);
+            if (!messageExists) {
+              const updatedMessages = [messageData, ...prevMessages];
+              return updatedMessages.sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
+            }
+            return prevMessages;
+          });
+        }
       }
     }
   };
@@ -1964,7 +2032,7 @@ export default function ChatDetailScreen() {
 
   const fetchChatroom = async () => {
     if (!chatroomId) return;
-    
+
     try {
       const response = await chatAPI.getConversationById(chatroomId);
       setChatroom(response.chatroom);
@@ -1976,15 +2044,15 @@ export default function ChatDetailScreen() {
 
   const fetchMessages = async () => {
     if (!chatroomId) return;
-    
+
     try {
       setLoading(true);
       const response = await chatAPI.getMessages(chatroomId, 1, 50);
-      const sortedMessages = (response.messages || []).sort((a, b) => 
+      const sortedMessages = (response.messages || []).sort((a, b) =>
         new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
       );
       setMessages(sortedMessages);
-      
+
       sortedMessages.forEach(msg => {
         if (msg.id) processedMessages.current.add(msg.id);
       });
@@ -2010,7 +2078,7 @@ export default function ChatDetailScreen() {
     console.log('[Web File Picker] typeof document:', typeof document);
     console.log('[Web File Picker] typeof window:', typeof window);
     console.log('[Web File Picker] navigator.userAgent:', typeof navigator !== 'undefined' ? navigator.userAgent : 'undefined');
-    
+
     return new Promise<SelectedMediaType | null>((resolve, reject) => {
       try {
         // Check if we're actually in a web environment
@@ -2020,7 +2088,7 @@ export default function ChatDetailScreen() {
           reject(new Error('DOM APIs not available - not in web environment'));
           return;
         }
-        
+
         // Additional check for DOM methods
         if (typeof document.createElement !== 'function') {
           console.error('[Web File Picker] document.createElement is not a function');
@@ -2035,30 +2103,30 @@ export default function ChatDetailScreen() {
         input.style.display = 'none';
         input.style.position = 'absolute';
         input.style.left = '-9999px';
-        
+
         console.log('[Web File Picker] Input element created:', {
           type: input.type,
           accept: input.accept,
           style: input.style.cssText
         });
-        
+
         let fileProcessed = false;
-        
+
         input.onchange = (event) => {
           console.log('[Web File Picker] Input change event triggered');
-          
+
           if (fileProcessed) {
             console.log('[Web File Picker] File already processed, ignoring duplicate event');
             return;
           }
-          
+
           try {
             const target = event.target as HTMLInputElement;
             const file = target.files?.[0];
-            
+
             console.log('[Web File Picker] Files from input:', target.files);
             console.log('[Web File Picker] Selected file:', file);
-            
+
             if (file) {
               fileProcessed = true;
               console.log('[Web File Picker] File details:', {
@@ -2067,18 +2135,18 @@ export default function ChatDetailScreen() {
                 type: file.type,
                 lastModified: file.lastModified
               });
-              
+
               const reader = new FileReader();
-              
+
               reader.onload = () => {
                 try {
                   console.log('[Web File Picker] FileReader onload triggered');
                   const uri = reader.result as string;
                   const fileSize = Math.round(file.size / 1024);
-                  
+
                   let mediaType: 'image' | 'video' | 'audio' = 'image';
                   let backendType = 'picture';
-                  
+
                   if (file.type.startsWith('audio/')) {
                     mediaType = 'audio';
                     backendType = 'audio';
@@ -2089,7 +2157,7 @@ export default function ChatDetailScreen() {
                     mediaType = 'image';
                     backendType = 'picture';
                   }
-                  
+
                   console.log('[Web File Picker] File processed:', {
                     mediaType,
                     backendType,
@@ -2097,7 +2165,7 @@ export default function ChatDetailScreen() {
                     uriLength: uri.length,
                     uriStart: uri.substring(0, 50)
                   });
-                  
+
                   const media: SelectedMediaType = {
                     uri,
                     type: mediaType,
@@ -2106,7 +2174,7 @@ export default function ChatDetailScreen() {
                     size: fileSize,
                     backendType,
                   };
-                  
+
                   console.log('[Web File Picker] Resolving with media object');
                   resolve(media);
                 } catch (error) {
@@ -2124,7 +2192,7 @@ export default function ChatDetailScreen() {
                   }
                 }
               };
-              
+
               reader.onerror = (error) => {
                 console.error('[Web File Picker] FileReader error:', error);
                 reject(new Error('Failed to read file'));
@@ -2136,7 +2204,7 @@ export default function ChatDetailScreen() {
                   console.warn('[Web File Picker] Error during cleanup after FileReader error:', cleanupError);
                 }
               };
-              
+
               console.log('[Web File Picker] Starting to read file as data URL...');
               reader.readAsDataURL(file);
             } else {
@@ -2155,7 +2223,7 @@ export default function ChatDetailScreen() {
             reject(error);
           }
         };
-        
+
         input.oncancel = () => {
           console.log('[Web File Picker] File selection canceled');
           resolve(null);
@@ -2167,21 +2235,21 @@ export default function ChatDetailScreen() {
             console.warn('[Web File Picker] Error during cleanup on cancel:', cleanupError);
           }
         };
-        
+
         // Add error handler for input element
         input.onerror = (error) => {
           console.error('[Web File Picker] Input element error:', error);
           reject(new Error('File input error'));
         };
-        
+
         console.log('[Web File Picker] Appending input to document body...');
         document.body.appendChild(input);
-        
+
         console.log('[Web File Picker] Triggering input click...');
         input.click();
-        
+
         console.log('[Web File Picker] File picker should now be open');
-        
+
         // Add a timeout as fallback
         setTimeout(() => {
           if (!fileProcessed) {
@@ -2195,7 +2263,7 @@ export default function ChatDetailScreen() {
             }
           }
         }, 60000); // 1 minute timeout
-        
+
       } catch (error) {
         console.error('[Web File Picker] Error in pickFileForWeb setup:', error);
         reject(error);
@@ -2207,15 +2275,15 @@ export default function ChatDetailScreen() {
     console.log('[handlePickMedia] Starting media picker process');
     console.log('[handlePickMedia] Platform.OS:', Platform.OS);
     console.log('[handlePickMedia] Current state - pickingMedia:', pickingMedia, 'selectedMedia:', !!selectedMedia);
-    
+
     setPickingMedia(true);
     try {
       console.log('[handlePickMedia] About to show media type selection');
-      
+
       // For web, directly trigger file picker for all files
       if (Platform.OS === 'web') {
         console.log('[handlePickMedia] Web platform detected - opening file picker for all files');
-        
+
         try {
           const media = await pickFileForWeb('*/*');
           console.log('[handlePickMedia] Web file picker returned:', media);
@@ -2229,11 +2297,11 @@ export default function ChatDetailScreen() {
           console.error('[handlePickMedia] Error with web file picker:', error);
           Alert.alert('Error', 'Failed to pick file. Please try again.');
         }
-        
+
         setPickingMedia(false);
         return;
       }
-      
+
       // For native platforms, use Alert.alert
       console.log('[handlePickMedia] Native platform - showing Alert.alert');
       Alert.alert(
@@ -2248,7 +2316,7 @@ export default function ChatDetailScreen() {
                 console.log('[handlePickMedia] Using native image picker');
                 // Request permissions for image picker
                 const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                
+
                 if (permissionResult.status !== 'granted') {
                   Alert.alert('Permission Required', 'Please allow access to your photo library to select images and videos.');
                   setPickingMedia(false);
@@ -2268,12 +2336,12 @@ export default function ChatDetailScreen() {
 
                   let mediaType: 'image' | 'video' | 'audio' = 'image';
                   let backendType = 'picture';
-                  
+
                   if (asset.type === 'video') {
                     mediaType = 'video';
                     backendType = 'video';
                   }
-                  
+
                   const media: SelectedMediaType = {
                     uri: asset.uri,
                     type: mediaType,
@@ -2282,7 +2350,7 @@ export default function ChatDetailScreen() {
                     size: fileSize,
                     backendType,
                   };
-                  
+
                   setSelectedMedia(media);
                 }
               } catch (error) {
@@ -2311,7 +2379,7 @@ export default function ChatDetailScreen() {
                 if (!result.canceled && result.assets && result.assets.length > 0) {
                   const asset = result.assets[0];
                   const fileSize = Math.round((asset.size || 0) / 1024);
-                  
+
                   console.log('Selected audio file:', {
                     name: asset.name,
                     size: fileSize,
@@ -2327,7 +2395,7 @@ export default function ChatDetailScreen() {
                     size: fileSize,
                     backendType: 'audio',
                   };
-                  
+
                   setSelectedMedia(media);
                   console.log('Audio media selected successfully');
                 } else {
@@ -2359,11 +2427,11 @@ export default function ChatDetailScreen() {
                 if (!result.canceled && result.assets && result.assets.length > 0) {
                   const asset = result.assets[0];
                   const fileSize = Math.round((asset.size || 0) / 1024);
-                  
+
                   // Determine file type from MIME type
                   let mediaType: 'image' | 'video' | 'audio' = 'image';
                   let backendType = 'picture';
-                  
+
                   if (asset.mimeType) {
                     if (asset.mimeType.startsWith('audio/')) {
                       mediaType = 'audio';
@@ -2376,7 +2444,7 @@ export default function ChatDetailScreen() {
                       backendType = 'picture';
                     }
                   }
-                  
+
                   console.log('Selected file:', {
                     name: asset.name,
                     size: fileSize,
@@ -2393,7 +2461,7 @@ export default function ChatDetailScreen() {
                     size: fileSize,
                     backendType,
                   };
-                  
+
                   setSelectedMedia(media);
                   console.log('File selected successfully');
                 } else {
@@ -2440,7 +2508,7 @@ export default function ChatDetailScreen() {
         try {
                      const uploadResult = await mediaAPI.uploadMedia(
              {
-            uri: selectedMedia.uri, 
+            uri: selectedMedia.uri,
             type: selectedMedia.mimeType,
             name: selectedMedia.name
              },
@@ -2467,7 +2535,7 @@ export default function ChatDetailScreen() {
       }
 
       await chatAPI.sendMessage(chatroomId, messageData);
-      
+
       setMessageText('');
       setSelectedMedia(null);
 
@@ -2481,6 +2549,90 @@ export default function ChatDetailScreen() {
 
   const handleRemoveMedia = () => {
     setSelectedMedia(null);
+  };
+
+  // Message action handlers
+  const handleEditMessage = async (messageId: string, newText: string, newMediaUrl?: string, newMessageType?: string) => {
+    if (!chatroomId) return;
+
+    try {
+      // Prepare update data
+      const updateData: any = {};
+      if (newText.trim()) {
+        updateData.text_content = newText.trim();
+      }
+      if (newMediaUrl) {
+        updateData.media_url = newMediaUrl;
+      }
+      if (newMessageType) {
+        updateData.message_type = newMessageType;
+      }
+
+      await chatAPI.updateMessage(chatroomId, messageId, updateData);
+
+      // Update local state immediately for better UX
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                text_content: newText.trim() || msg.text_content,
+                media_url: newMediaUrl || msg.media_url,
+                message_type: (newMessageType as any) || msg.message_type,
+                edited: true,
+                edited_at: new Date().toISOString()
+              }
+            : msg
+        )
+      );
+
+      console.log('[Chat] Message edited successfully');
+    } catch (error) {
+      console.error('[Chat] Error editing message:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!chatroomId) return;
+
+    try {
+      await chatAPI.deleteMessage(chatroomId, messageId);
+
+      // Update local state immediately for better UX
+      setMessages(prevMessages =>
+        prevMessages.filter(msg => msg.id !== messageId)
+      );
+
+      console.log('[Chat] Message deleted successfully');
+    } catch (error) {
+      console.error('[Chat] Error deleting message:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteChatroom = async (chatroomId: string) => {
+    try {
+      await chatAPI.deleteChatroom(chatroomId);
+
+      Alert.alert(
+        'Chatroom Deleted',
+        'The chatroom has been deleted successfully.',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+
+      console.log('[Chat] Chatroom deleted successfully');
+    } catch (error) {
+      console.error('[Chat] Error deleting chatroom:', error);
+      throw error;
+    }
+  };
+
+  const handleMessageLongPress = (message: Message) => {
+    if (message.sender_id === user?.id) {
+      setSelectedMessage(message);
+      setShowMessageActions(true);
+    }
   };
 
   const getUserGradient = (userId: number) => {
@@ -2510,10 +2662,14 @@ export default function ChatDetailScreen() {
     };
 
     return (
-      <View style={[
-        styles.messageContainer,
-        isOwnMessage ? styles.ownMessageContainer : styles.otherMessageContainer
-      ]}>
+      <TouchableOpacity
+        style={[
+          styles.messageContainer,
+          isOwnMessage ? styles.ownMessageContainer : styles.otherMessageContainer
+        ]}
+        onLongPress={() => handleMessageLongPress(item)}
+        activeOpacity={0.8}
+      >
         {isOwnMessage ? (
           <LinearGradient
             colors={GoldTheme.gradients.goldButton}
@@ -2542,9 +2698,16 @@ export default function ChatDetailScreen() {
         )}
 
         {item.text_content && (
-              <Text style={[styles.messageText, styles.ownMessageText]}>
-            {item.text_content}
+          <View>
+            <Text style={[styles.messageText, styles.ownMessageText]}>
+              {item.text_content}
+            </Text>
+            {item.edited && (
+              <Text style={[styles.editedIndicator, styles.ownEditedIndicator]}>
+                edited
               </Text>
+            )}
+          </View>
         )}
 
         <View style={styles.messageFooter}>
@@ -2588,9 +2751,16 @@ export default function ChatDetailScreen() {
             )}
 
             {item.text_content && (
-              <Text style={[styles.messageText, styles.otherMessageText]}>
-                {item.text_content}
-              </Text>
+              <View>
+                <Text style={[styles.messageText, styles.otherMessageText]}>
+                  {item.text_content}
+                </Text>
+                {item.edited && (
+                  <Text style={[styles.editedIndicator, styles.otherEditedIndicator]}>
+                    edited
+                  </Text>
+                )}
+              </View>
             )}
 
             <View style={styles.messageFooter}>
@@ -2600,7 +2770,7 @@ export default function ChatDetailScreen() {
             </View>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -2636,7 +2806,7 @@ export default function ChatDetailScreen() {
       style={styles.container}
     >
       <StatusBar barStyle="light-content" backgroundColor={GoldTheme.background.primary} />
-      
+
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -2688,6 +2858,32 @@ export default function ChatDetailScreen() {
         </View>
       </Modal>
 
+      {/* Message Actions Modal */}
+      {selectedMessage && (
+        <MessageActions
+          message={selectedMessage}
+          isVisible={showMessageActions}
+          onClose={() => {
+            setShowMessageActions(false);
+            setSelectedMessage(null);
+          }}
+          onEdit={handleEditMessage}
+          onDelete={handleDeleteMessage}
+          currentUserId={user?.id || 0}
+        />
+      )}
+
+      {/* Chatroom Actions Modal */}
+      {chatroom && (
+        <ChatroomActions
+          chatroom={chatroom}
+          isVisible={showChatroomActions}
+          onClose={() => setShowChatroomActions(false)}
+          onDelete={handleDeleteChatroom}
+          currentUserId={user?.id || 0}
+        />
+      )}
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
@@ -2718,7 +2914,7 @@ export default function ChatDetailScreen() {
             {selectedMedia.name && (
               <View style={styles.fileInfoContainer}>
                   <Text style={styles.fileName}>
-                  {selectedMedia.name} 
+                  {selectedMedia.name}
                   {selectedMedia.size ? ` (${selectedMedia.size} KB)` : ''}
                   </Text>
               </View>
@@ -2730,7 +2926,7 @@ export default function ChatDetailScreen() {
           <TouchableOpacity
             onPress={handlePickMedia}
             style={[
-              styles.attachButton, 
+              styles.attachButton,
               (sending || pickingMedia || isUploading || !!selectedMedia) && styles.disabledButton
             ]}
             disabled={sending || pickingMedia || isUploading || !!selectedMedia}
@@ -2745,7 +2941,7 @@ export default function ChatDetailScreen() {
 
           <TextInput
             style={[
-              styles.textInput, 
+              styles.textInput,
               (sending || isUploading) && styles.disabledInput
             ]}
             value={messageText}
@@ -2761,8 +2957,8 @@ export default function ChatDetailScreen() {
             onPress={handleSendMessage}
             style={[
               styles.sendButton,
-              (messageText.trim() || selectedMedia) && !sending && !isUploading 
-                ? styles.sendButtonActive 
+              (messageText.trim() || selectedMedia) && !sending && !isUploading
+                ? styles.sendButtonActive
                 : styles.sendButtonDisabled,
             ]}
             disabled={(!messageText.trim() && !selectedMedia) || sending || isUploading}
