@@ -25,10 +25,14 @@ interface WebSocketServiceOptions {
     private currentRoomId: string | null = null;
     private currentToken: string | null = null;
     private connectionAttempts: number = 0;
-    private maxConnectionAttempts: number = 5;
+    private maxConnectionAttempts: number = 3; // Reduced from 5 to 3
     private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private isReconnecting: boolean = false;
     private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+    private lastSuccessfulConnection: number = 0;
+    private connectionBackoffMultiplier: number = 1.5; // Gentler backoff
+    private isManualDisconnect: boolean = false;
+    private connectionStabilityTimer: ReturnType<typeof setTimeout> | null = null;
 
     private defaultOptions: WebSocketServiceOptions = {
       onOpen: () => console.log("[WebSocketService] Connection opened."),
@@ -45,6 +49,7 @@ interface WebSocketServiceOptions {
 
       console.log("[WebSocketService] Attempting to connect with roomId:", roomId);
 
+      // Check if we're already connected to the same room
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         if (this.currentRoomId === roomId && this.currentToken === token) {
           console.log("[WebSocketService] Already connected to the same room with the same token.");
@@ -53,13 +58,24 @@ interface WebSocketServiceOptions {
         }
         console.log("[WebSocketService] Disconnecting from current room before connecting to new room");
         this.disconnect();
+
+        // Add a small delay before connecting to new room to ensure clean disconnection
+        setTimeout(() => {
+          this._initiateConnection(roomId, token, options);
+        }, 500);
+        return;
       }
 
+      this._initiateConnection(roomId, token, options);
+    }
+
+    private _initiateConnection(roomId: string, token: string, options?: WebSocketServiceOptions): void {
       this.currentRoomId = roomId;
       this.currentToken = token;
       this.options = { ...this.defaultOptions, ...options };
       this.connectionAttempts = 0;
       this.isReconnecting = false;
+      this.isManualDisconnect = false;
 
       const url = `${WS_BASE_URL}?token=${encodeURIComponent(token)}&room_id=${encodeURIComponent(roomId)}`;
       console.log(`[WebSocketService] Connecting to WebSocket URL: ${url}`);
@@ -94,6 +110,18 @@ interface WebSocketServiceOptions {
           console.log("[WebSocketService] Connection established successfully");
           this.connectionAttempts = 0;
           this.isReconnecting = false;
+          this.lastSuccessfulConnection = Date.now();
+
+          // Clear any existing stability timer
+          if (this.connectionStabilityTimer) {
+            clearTimeout(this.connectionStabilityTimer);
+          }
+
+          // Set a stability timer - if connection stays open for 10 seconds, consider it stable
+          this.connectionStabilityTimer = setTimeout(() => {
+            console.log("[WebSocketService] Connection stable for 10 seconds");
+            this.connectionAttempts = 0; // Reset attempts after stable connection
+          }, 10000);
 
           // Start heartbeat after successful connection
           this.startHeartbeat();
@@ -156,13 +184,50 @@ interface WebSocketServiceOptions {
           console.log("[WebSocketService] Connection closed. Code:", event.code, "Reason:", event.reason);
           this.stopHeartbeat();
 
+          // Clear stability timer
+          if (this.connectionStabilityTimer) {
+            clearTimeout(this.connectionStabilityTimer);
+            this.connectionStabilityTimer = null;
+          }
+
           if (this.options?.onClose) {
             this.options.onClose(event);
           }
 
-          if (!this.isReconnecting && event.code !== 1000 && this.currentRoomId && this.currentToken) {
-            console.log("[WebSocketService] Initiating reconnection after close");
-            this.handleReconnect();
+          // Only reconnect if:
+          // 1. Not a manual disconnect (code 1000)
+          // 2. Not already reconnecting
+          // 3. We have room and token info
+          // 4. Connection was not manually closed
+          // 5. We haven't exceeded max attempts
+          const shouldReconnect = !this.isManualDisconnect &&
+                                 !this.isReconnecting &&
+                                 event.code !== 1000 &&
+                                 this.currentRoomId &&
+                                 this.currentToken &&
+                                 this.connectionAttempts < this.maxConnectionAttempts;
+
+          if (shouldReconnect) {
+            // Add delay based on how quickly the connection failed
+            const connectionDuration = Date.now() - this.lastSuccessfulConnection;
+            const isQuickFailure = connectionDuration < 5000; // Failed within 5 seconds
+
+            if (isQuickFailure) {
+              console.log("[WebSocketService] Quick connection failure detected, using longer delay");
+              this.handleReconnect(true);
+            } else {
+              console.log("[WebSocketService] Initiating reconnection after close");
+              this.handleReconnect(false);
+            }
+          } else {
+            console.log("[WebSocketService] Not reconnecting:", {
+              isManualDisconnect: this.isManualDisconnect,
+              isReconnecting: this.isReconnecting,
+              code: event.code,
+              hasRoomAndToken: !!(this.currentRoomId && this.currentToken),
+              attempts: this.connectionAttempts,
+              maxAttempts: this.maxConnectionAttempts
+            });
           }
         };
 
@@ -181,10 +246,9 @@ interface WebSocketServiceOptions {
             this.options.onError(mockErrorEvent);
           }
 
-          if (!this.isReconnecting && this.currentRoomId && this.currentToken) {
-            console.log("[WebSocketService] Initiating reconnection after error");
-            this.handleReconnect();
-          }
+          // Don't immediately reconnect on error - let the close handler deal with it
+          // This prevents double reconnection attempts
+          console.log("[WebSocketService] Error occurred, waiting for close event to handle reconnection");
         };
       } catch (error) {
           console.error("[WebSocketService] Error creating WebSocket:", error);
@@ -206,16 +270,21 @@ interface WebSocketServiceOptions {
         clearInterval(this.heartbeatInterval);
       }
 
-      // Send heartbeat every 30 seconds
+      // Send heartbeat every 45 seconds (increased from 30 to reduce server load)
       this.heartbeatInterval = setInterval(() => {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN && !this.isManualDisconnect) {
           const heartbeatMsg: WebSocketMessage = {
             type: 'heartbeat',
             data: { timestamp: new Date().toISOString() }
           };
-          this.ws.send(JSON.stringify(heartbeatMsg));
+          try {
+            this.ws.send(JSON.stringify(heartbeatMsg));
+            console.log("[WebSocketService] Heartbeat sent");
+          } catch (error) {
+            console.error("[WebSocketService] Error sending heartbeat:", error);
+          }
         }
-      }, 30000);
+      }, 45000);
     }
 
     private stopHeartbeat(): void {
@@ -225,7 +294,7 @@ interface WebSocketServiceOptions {
       }
     }
 
-    private handleReconnect(): void {
+    private handleReconnect(isQuickFailure: boolean = false): void {
       if (this.isReconnecting || !this.currentRoomId || !this.currentToken) {
         return;
       }
@@ -235,41 +304,63 @@ interface WebSocketServiceOptions {
 
       if (this.connectionAttempts >= this.maxConnectionAttempts) {
         console.error("[WebSocketService] Max reconnection attempts reached");
+        this.isReconnecting = false;
         return;
       }
 
-      const delay = Math.min(1000 * Math.pow(2, this.connectionAttempts), 30000);
+      // Calculate delay with gentler backoff
+      let baseDelay = 1000 * Math.pow(this.connectionBackoffMultiplier, this.connectionAttempts);
+
+      // If it's a quick failure, use a longer delay
+      if (isQuickFailure) {
+        baseDelay = Math.max(baseDelay, 5000); // At least 5 seconds for quick failures
+      }
+
+      const delay = Math.min(baseDelay, 30000); // Cap at 30 seconds
       console.log(`[WebSocketService] Attempting to reconnect in ${delay/1000}s (attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`);
 
       this.reconnectTimeoutId = setTimeout(() => {
-        if (this.currentRoomId && this.currentToken) {
+        if (this.currentRoomId && this.currentToken && !this.isManualDisconnect) {
           const url = `${WS_BASE_URL}?token=${encodeURIComponent(this.currentToken)}&room_id=${encodeURIComponent(this.currentRoomId)}`;
           this._establishConnection(url);
+        } else {
+          this.isReconnecting = false;
         }
       }, delay);
     }
 
     public disconnect(): void {
+      console.log("[WebSocketService] Manual disconnect initiated");
+      this.isManualDisconnect = true;
       this.isReconnecting = false;
       this.stopHeartbeat();
 
+      // Clear all timers
       if (this.reconnectTimeoutId) {
         clearTimeout(this.reconnectTimeoutId);
         this.reconnectTimeoutId = null;
       }
 
+      if (this.connectionStabilityTimer) {
+        clearTimeout(this.connectionStabilityTimer);
+        this.connectionStabilityTimer = null;
+      }
+
       if (this.ws) {
-        console.log("[WebSocketService] Disconnecting...");
+        console.log("[WebSocketService] Closing WebSocket connection...");
         try {
           this.ws.close(1000, "Manual disconnection");
         } catch (error) {
           console.error("[WebSocketService] Error closing connection:", error);
         }
       }
+
+      // Reset all state
       this.ws = null;
       this.currentRoomId = null;
       this.currentToken = null;
       this.connectionAttempts = 0;
+      this.lastSuccessfulConnection = 0;
     }
 
     public sendMessage(data: object): boolean {

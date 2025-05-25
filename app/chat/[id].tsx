@@ -2019,14 +2019,21 @@ export default function ChatDetailScreen() {
     if (chatroomId && user?.id) {
       console.log('[Chat] Setting up WebSocket connection for room:', chatroomId);
 
-    addMessageHandler(handleIncomingMessage);
-      connectToRoom(chatroomId);
+      // Add message handler first
+      addMessageHandler(handleIncomingMessage);
 
-    return () => {
+      // Connect to room with a small delay to ensure handler is registered
+      const connectTimer = setTimeout(() => {
+        connectToRoom(chatroomId);
+      }, 100);
+
+      return () => {
         console.log('[Chat] Cleaning up WebSocket connection');
-      removeMessageHandler(handleIncomingMessage);
-        disconnectFromRoom();
-    };
+        clearTimeout(connectTimer);
+        removeMessageHandler(handleIncomingMessage);
+        // Don't disconnect immediately - let the context handle it
+        // This prevents unnecessary disconnections when navigating between chats
+      };
     }
   }, [chatroomId, user?.id]);
 

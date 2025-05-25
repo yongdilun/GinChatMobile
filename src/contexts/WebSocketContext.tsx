@@ -35,11 +35,19 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
   const handleClose = useCallback((event: WebSocketCloseEvent) => {
     console.log("[WebSocketContext] WebSocket disconnected.", event.code, event.reason);
     setIsConnected(false);
+
+    // Log close reason for debugging
+    if (event.code === 1006) {
+      console.log("[WebSocketContext] Abnormal closure detected (1006) - this is common on mobile networks");
+    } else if (event.code === 1000) {
+      console.log("[WebSocketContext] Normal closure (1000) - manual disconnect");
+    }
   }, []);
 
   const handleError = useCallback((event: WebSocketErrorEvent) => {
-    console.error("[WebSocketContext] WebSocket error:", event.message || event);
-    setIsConnected(false);
+    console.error("[WebSocketContext] WebSocket error:", event.message || "WebSocket error occurred");
+    // Don't immediately set disconnected - let the close handler deal with it
+    // This prevents rapid state changes
   }, []);
 
   const connectToRoom = useCallback(async (roomId: string) => {
@@ -54,7 +62,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     try {
       console.log(`[WebSocketContext] Connecting to room ${roomId} with token available: ${!!token}`);
-      
+
       // Store the current room ID
       currentRoomIdRef.current = roomId;
       await AsyncStorage.setItem('lastConnectedRoom', roomId);
@@ -99,8 +107,8 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
       }
     };
 
-    // Check status periodically
-    const intervalId = setInterval(checkConnectionStatus, 5000);
+    // Check status less frequently to reduce overhead
+    const intervalId = setInterval(checkConnectionStatus, 10000); // Increased from 5s to 10s
     checkConnectionStatus(); // Initial check
 
     return () => clearInterval(intervalId);
