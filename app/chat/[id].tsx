@@ -2271,16 +2271,32 @@ export default function ChatDetailScreen() {
     }
   };
 
-  // Mark all messages in chatroom as read
+  // Mark all messages in chatroom as read (with smart safeguards)
   const markAllMessagesAsRead = async () => {
-    // TEMPORARY: Completely disable mark-all-read to stop spam
-    console.log('[Chat] 🚫 TEMPORARILY DISABLED mark-all-read to stop spam');
-    return;
-
     if (!chatroomId || !user?.token || !user?.id) {
       console.log('[Chat] Skipping mark all as read - missing required data:', { chatroomId: !!chatroomId, token: !!user?.token, userId: !!user?.id });
       return;
     }
+
+    // Smart detection: Only mark as read if there are actually unread messages from other users
+    const hasUnreadFromOthers = messages.some(msg => {
+      // Skip messages sent by current user
+      if (msg.sender_id === user.id) return false;
+
+      // Check if current user has read this message
+      if (!msg.read_status || !Array.isArray(msg.read_status)) return true; // No read status = unread
+
+      const currentUserReadStatus = msg.read_status.find(status => status.user_id === user.id);
+      return !currentUserReadStatus || !currentUserReadStatus.is_read;
+    });
+
+    if (!hasUnreadFromOthers) {
+      console.log('[Chat] 🎯 SMART SKIP: No unread messages from other users, skipping mark-all-read');
+      setHasMarkedAllAsRead(true); // Prevent future calls
+      return;
+    }
+
+    console.log('[Chat] 🎯 SMART PROCEED: Found unread messages from others, proceeding with mark-all-read');
 
     // Prevent infinite loop - only mark as read once per chat session
     if (markingAllAsRead || hasMarkedAllAsRead) {
@@ -2984,17 +3000,8 @@ export default function ChatDetailScreen() {
     return gradients[userId % gradients.length];
   };
 
-  // Get read status for a message
+  // Get read status for a message (optimized with reduced logging)
   const getReadStatus = (message: Message) => {
-    // Debug logging for read status calculation
-    if (message.id && message.sender_id === user?.id) {
-      console.log(`[Chat] Calculating read status for own message ${message.id}:`, {
-        read_status: message.read_status,
-        is_array: Array.isArray(message.read_status),
-        length: message.read_status?.length
-      });
-    }
-
     if (!message.read_status || !Array.isArray(message.read_status)) {
       return { icon: 'checkmark', color: 'rgba(255, 255, 255, 0.6)', title: 'Sent' };
     }
@@ -3002,21 +3009,11 @@ export default function ChatDetailScreen() {
     const readCount = message.read_status.filter(status => status.is_read).length;
     const totalRecipients = message.read_status.length;
 
-    // Debug logging for own messages
-    if (message.sender_id === user?.id) {
-      console.log(`[Chat] Message ${message.id} read status: ${readCount}/${totalRecipients} read`, {
-        readStatuses: message.read_status.map(s => ({ user_id: s.user_id, is_read: s.is_read }))
-      });
-    }
-
     if (readCount === 0) {
       // No one has read it - single grey tick
       return { icon: 'checkmark', color: 'rgba(255, 255, 255, 0.6)', title: 'Sent' };
     } else if (readCount === totalRecipients) {
       // Everyone has read it - blue double tick
-      if (message.sender_id === user?.id) {
-        console.log(`[Chat] Message ${message.id} showing BLUE tick (read by all)`);
-      }
       return { icon: 'checkmark-done', color: '#4FC3F7', title: 'Read by all' };
     } else {
       // Some have read it - grey double tick
