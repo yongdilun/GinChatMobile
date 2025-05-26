@@ -545,11 +545,7 @@ function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; m
 
               <TouchableOpacity
                 style={styles.headerButton}
-                onPress={() => {
-                  console.log('[Chat] Three-dot menu pressed');
-                  console.log('[Chat] setShowChatroomActions function:', typeof setShowChatroomActions);
-                  setShowChatroomActions(true);
-                }}
+                onPress={handleShowChatroomActions}
                 activeOpacity={0.8}
               >
                 <Ionicons
@@ -1951,6 +1947,18 @@ export default function ChatDetailScreen() {
   const [showMessageActions, setShowMessageActions] = useState(false);
   const [showChatroomActions, setShowChatroomActions] = useState(false);
 
+  // Handler functions
+  const handleShowChatroomActions = () => {
+    console.log('[Chat] Chatroom actions button pressed');
+    console.log('[Chat] setShowChatroomActions function exists:', typeof setShowChatroomActions === 'function');
+    try {
+      setShowChatroomActions(true);
+      console.log('[Chat] Successfully set showChatroomActions to true');
+    } catch (error) {
+      console.error('[Chat] Error setting showChatroomActions:', error);
+    }
+  };
+
   const {
     connectToRoom,
     disconnectFromRoom,
@@ -2652,6 +2660,8 @@ export default function ChatDetailScreen() {
       console.log('[Chat] Cannot modify message - not the sender');
     }
   };
+
+
 
   const getUserGradient = (userId: number) => {
     const gradients = [

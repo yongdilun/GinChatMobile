@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -51,9 +51,18 @@ export function MessageActions({
     showEditModal
   });
 
+  // Track showEditModal changes
+  useEffect(() => {
+    console.log('[MessageActions] showEditModal changed to:', showEditModal);
+  }, [showEditModal]);
+
   const handleEdit = () => {
     console.log('[MessageActions] Edit button pressed');
     console.log('[MessageActions] Setting showEditModal to true');
+
+    // Temporary test - show alert first
+    Alert.alert('Debug', 'Edit button was pressed! About to show modal.');
+
     setShowEditModal(true);
     console.log('[MessageActions] Calling onClose');
     onClose();
@@ -187,7 +196,10 @@ export function MessageActions({
         visible={showEditModal}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setShowEditModal(false)}
+        onRequestClose={() => {
+          console.log('[MessageActions] Edit modal onRequestClose called');
+          setShowEditModal(false);
+        }}
       >
         <View style={styles.editOverlay}>
           <View style={styles.editContainer}>
@@ -198,7 +210,10 @@ export function MessageActions({
               <View style={styles.editHeader}>
                 <Text style={styles.editTitle}>Edit Message</Text>
                 <TouchableOpacity
-                  onPress={() => setShowEditModal(false)}
+                  onPress={() => {
+                    console.log('[MessageActions] Edit modal close button pressed');
+                    setShowEditModal(false);
+                  }}
                   style={styles.closeButton}
                 >
                   <Ionicons name="close" size={24} color={GoldTheme.text.primary} />
@@ -244,7 +259,10 @@ export function MessageActions({
               <View style={styles.editActions}>
                 <GoldButton
                   title="Cancel"
-                  onPress={() => setShowEditModal(false)}
+                  onPress={() => {
+                    console.log('[MessageActions] Cancel button pressed');
+                    setShowEditModal(false);
+                  }}
                   variant="outline"
                   style={styles.editButton}
                   disabled={isEditing}
