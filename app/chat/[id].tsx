@@ -39,7 +39,7 @@ import * as DocumentPicker from 'expo-document-picker';
 // Use the same API URL as the rest of the app
 const API_URL = 'https://ginchat-14ry.onrender.com/api';
 
-// Debounce utility for performance optimization
+// Debounce utility to prevent spam calls
 const debounce = (func: Function, wait: number) => {
   let timeout: NodeJS.Timeout;
   return function executedFunction(...args: any[]) {
@@ -1978,6 +1978,10 @@ export default function ChatDetailScreen() {
   const [showMessageActions, setShowMessageActions] = useState(false);
   const [showChatroomActions, setShowChatroomActions] = useState(false);
 
+  // Prevent infinite loop state
+  const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
+  const [hasMarkedAllAsRead, setHasMarkedAllAsRead] = useState(false);
+
   // Handler for three-dot menu
   const handleThreeDotMenu = useCallback(() => {
     console.log('[Chat] Three-dot menu pressed');
@@ -2110,8 +2114,8 @@ export default function ChatDetailScreen() {
           });
 
           // Auto-mark new messages as read when received in this chat
-          if (messageData.sender_id !== user?.id) {
-            // Use optimistic update for instant feedback
+          if (messageData.sender_id !== user?.id && !markingAllAsRead) {
+            // Use optimistic update for instant feedback (but not if we're already marking all as read)
             markMessageAsRead(messageData.id);
           }
         }
@@ -2253,7 +2257,14 @@ export default function ChatDetailScreen() {
   const markAllMessagesAsRead = async () => {
     if (!chatroomId || !user?.token || !user?.id) return;
 
+    // Prevent infinite loop - only mark as read once per chat session
+    if (markingAllAsRead || hasMarkedAllAsRead) {
+      console.log('[Chat] Skipping mark all as read - already in progress or completed:', { markingAllAsRead, hasMarkedAllAsRead });
+      return;
+    }
+
     console.log('[Chat] Marking all messages as read (optimistic) for chatroom:', chatroomId, 'User ID:', user.id);
+    setMarkingAllAsRead(true);
 
     // OPTIMISTIC UPDATE: Update UI immediately for instant feedback
     setMessages(prevMessages => {
@@ -2307,18 +2318,27 @@ export default function ChatDetailScreen() {
 
       if (response.ok) {
         console.log('[Chat] Successfully marked all messages as read (confirmed)');
+        setHasMarkedAllAsRead(true); // Mark as completed successfully
       } else {
         console.error('[Chat] Failed to mark messages as read:', response.status);
-        // TODO: Could implement rollback here if needed
+        // Reset state on failure so user can try again
+        setMarkingAllAsRead(false);
       }
     } catch (error) {
       console.error('[Chat] Error marking messages as read:', error);
-      // TODO: Could implement rollback here if needed
+      // Reset state on error so user can try again
+      setMarkingAllAsRead(false);
+    } finally {
+      setMarkingAllAsRead(false);
     }
   };
 
   useEffect(() => {
     if (chatroomId) {
+      // Reset mark-all-read state when changing chatrooms
+      setMarkingAllAsRead(false);
+      setHasMarkedAllAsRead(false);
+
       fetchChatroom();
       fetchMessages();
     }
