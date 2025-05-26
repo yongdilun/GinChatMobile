@@ -55,13 +55,16 @@ interface WebSocketServiceOptions {
           if (this.options?.onOpen) this.options.onOpen();
           return;
         }
-        console.log("[WebSocketService] Disconnecting from current room before connecting to new room");
+        console.log("[WebSocketService] Switching to new room, keeping connection alive");
+        // Don't disconnect aggressively, just update room info
+        this.currentRoomId = roomId;
+        this.currentToken = token;
         this.disconnect();
 
-        // Add a small delay before connecting to new room to ensure clean disconnection
+        // Shorter delay for room switching
         setTimeout(() => {
           this._initiateConnection(roomId, token, options);
-        }, 500);
+        }, 200);
         return;
       }
 
@@ -310,8 +313,8 @@ interface WebSocketServiceOptions {
         return;
       }
 
-      // Much more conservative: 10s, 30s, 60s (max) to reduce server load
-      const delay = Math.min(10000 + (this.connectionAttempts * 20000), 60000);
+      // More aggressive reconnection for mobile: 5s, 10s, 15s, 20s (max)
+      const delay = Math.min(5000 + (this.connectionAttempts * 5000), 20000);
       console.log(`[WebSocketService] Attempting to reconnect in ${delay/1000}s (attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`);
 
       this.reconnectTimeoutId = setTimeout(() => {
