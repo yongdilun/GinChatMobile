@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   FlatList,
@@ -545,7 +545,7 @@ function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; m
 
               <TouchableOpacity
                 style={styles.headerButton}
-                onPress={handleShowChatroomActions}
+                onPress={() => Alert.alert('Test', 'Three-dot menu pressed!')}
                 activeOpacity={0.8}
               >
                 <Ionicons
@@ -1948,7 +1948,7 @@ export default function ChatDetailScreen() {
   const [showChatroomActions, setShowChatroomActions] = useState(false);
 
   // Handler functions
-  const handleShowChatroomActions = () => {
+  const handleShowChatroomActions = useCallback(() => {
     console.log('[Chat] Chatroom actions button pressed');
     console.log('[Chat] setShowChatroomActions function exists:', typeof setShowChatroomActions === 'function');
     try {
@@ -1957,7 +1957,7 @@ export default function ChatDetailScreen() {
     } catch (error) {
       console.error('[Chat] Error setting showChatroomActions:', error);
     }
-  };
+  }, []);
 
   const {
     connectToRoom,

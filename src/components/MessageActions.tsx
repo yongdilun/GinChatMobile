@@ -60,9 +60,6 @@ export function MessageActions({
     console.log('[MessageActions] Edit button pressed');
     console.log('[MessageActions] Setting showEditModal to true');
 
-    // Temporary test - show alert first
-    Alert.alert('Debug', 'Edit button was pressed! About to show modal.');
-
     setShowEditModal(true);
     console.log('[MessageActions] Calling onClose');
     onClose();
