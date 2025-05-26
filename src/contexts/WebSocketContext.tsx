@@ -176,7 +176,15 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
           const lastRoom = await AsyncStorage.getItem('lastConnectedRoom');
           if (lastRoom) {
             console.log("[WebSocketContext] Attempting to reconnect to last room:", lastRoom);
-            connectToRoom(lastRoom);
+            // Only auto-reconnect to sidebar or if explicitly requested
+            if (lastRoom === 'global_sidebar') {
+              console.log("[WebSocketContext] Auto-reconnecting to sidebar");
+              connectToSidebar();
+            } else {
+              console.log("[WebSocketContext] Skipping auto-reconnection to chat room, let pages handle their own connections");
+              // Don't auto-reconnect to specific chat rooms
+              // Let individual pages (chat page, chats page) handle their own connections
+            }
           }
         } catch (error) {
           console.error("[WebSocketContext] Error reconnecting to last room:", error);
@@ -198,7 +206,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
         webSocketService.disconnect();
       }
     };
-  }, [token, connectToRoom]);
+  }, [token, connectToSidebar]);
 
   return (
     <WebSocketContext.Provider

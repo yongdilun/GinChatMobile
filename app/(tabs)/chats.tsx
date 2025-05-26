@@ -32,6 +32,7 @@ export default function ChatsScreen() {
   // WebSocket message handler for sidebar updates
   const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
     console.log('[ChatsScreen] Received WebSocket message:', message.type);
+    console.log('[ChatsScreen] Message data:', JSON.stringify(message.data));
 
     switch (message.type) {
       case 'new_message':
@@ -85,13 +86,9 @@ export default function ChatsScreen() {
     console.log('[ChatsScreen] Component mounted, setting up sidebar WebSocket');
     console.log('[ChatsScreen] Current connection state - isConnected:', isConnected, 'currentRoomId:', currentRoomId);
 
-    // Connect to sidebar if not already connected to sidebar
-    if (!isConnected || currentRoomId !== 'global_sidebar') {
-      console.log('[ChatsScreen] Connecting to sidebar for global updates');
-      connectToSidebar();
-    } else {
-      console.log('[ChatsScreen] Already connected to sidebar, skipping connection');
-    }
+    // Always connect to sidebar when chats page loads (disconnect from any chat room first)
+    console.log('[ChatsScreen] Connecting to sidebar for global updates');
+    connectToSidebar();
 
     addMessageHandler(handleWebSocketMessage);
 
