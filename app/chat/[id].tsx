@@ -457,7 +457,15 @@ function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: bool
   );
 }
 
-function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; messages: Message[] }) {
+function ChatDetailHeader({
+  chatroom,
+  messages,
+  onThreeDotPress
+}: {
+  chatroom: Chatroom | null;
+  messages: Message[];
+  onThreeDotPress?: () => void;
+}) {
   const [showContent, setShowContent] = useState(false);
   const [activeTab, setActiveTab] = useState<'members' | 'images' | 'videos' | 'audio'>('members');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -547,12 +555,10 @@ function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; m
                 style={styles.headerButton}
                 onPress={() => {
                   console.log('[Chat] Three-dot menu pressed');
-                  try {
-                    setShowChatroomActions(true);
-                    console.log('[Chat] Successfully set showChatroomActions to true');
-                  } catch (error) {
-                    console.error('[Chat] Error setting showChatroomActions:', error);
-                    Alert.alert('Error', 'Failed to open chatroom actions');
+                  if (onThreeDotPress) {
+                    onThreeDotPress();
+                  } else {
+                    Alert.alert('Info', 'Chatroom actions not available');
                   }
                 }}
                 activeOpacity={0.8}
@@ -1956,16 +1962,10 @@ export default function ChatDetailScreen() {
   const [showMessageActions, setShowMessageActions] = useState(false);
   const [showChatroomActions, setShowChatroomActions] = useState(false);
 
-  // Handler functions
-  const handleShowChatroomActions = useCallback(() => {
-    console.log('[Chat] Chatroom actions button pressed');
-    console.log('[Chat] setShowChatroomActions function exists:', typeof setShowChatroomActions === 'function');
-    try {
-      setShowChatroomActions(true);
-      console.log('[Chat] Successfully set showChatroomActions to true');
-    } catch (error) {
-      console.error('[Chat] Error setting showChatroomActions:', error);
-    }
+  // Handler for three-dot menu
+  const handleThreeDotMenu = useCallback(() => {
+    console.log('[Chat] Three-dot menu pressed');
+    setShowChatroomActions(true);
   }, []);
 
   const {
@@ -2352,7 +2352,7 @@ export default function ChatDetailScreen() {
                 }
 
                 const result = await ImagePicker.launchImageLibraryAsync({
-                  mediaTypes: ImagePicker.MediaTypeOptions.All,
+                  mediaTypes: 'all' as any, // Use 'all' for both images and videos
                   allowsEditing: false,
                   quality: 0.8,
                   allowsMultipleSelection: false,
@@ -2849,7 +2849,11 @@ export default function ChatDetailScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-        <ChatDetailHeader chatroom={chatroom} messages={messages} />
+        <ChatDetailHeader
+          chatroom={chatroom}
+          messages={messages}
+          onThreeDotPress={handleThreeDotMenu}
+        />
 
       <FlatList
         ref={flatListRef}

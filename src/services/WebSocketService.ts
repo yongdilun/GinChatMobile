@@ -25,7 +25,7 @@ interface WebSocketServiceOptions {
     private currentRoomId: string | null = null;
     private currentToken: string | null = null;
     private connectionAttempts: number = 0;
-    private maxConnectionAttempts: number = 3; // Reduced from 5 to 3
+    private maxConnectionAttempts: number = 5; // Increased back to 5 for better reliability
     private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private isReconnecting: boolean = false;
     private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
@@ -301,7 +301,7 @@ interface WebSocketServiceOptions {
         clearInterval(this.connectionHealthCheck);
       }
 
-      // Check connection health every 60 seconds
+      // Check connection health every 2 minutes (less aggressive)
       this.connectionHealthCheck = setInterval(() => {
         if (this.ws && this.ws.readyState === WebSocket.OPEN && !this.isManualDisconnect) {
           // Connection is healthy, reset consecutive failures
@@ -313,7 +313,7 @@ interface WebSocketServiceOptions {
           console.log("[WebSocketService] Health check detected closed connection, attempting reconnection");
           this.handleReconnect();
         }
-      }, 60000);
+      }, 120000); // 2 minutes instead of 1 minute
     }
 
     private stopConnectionHealthCheck(): void {
@@ -337,8 +337,8 @@ interface WebSocketServiceOptions {
         return;
       }
 
-      // Simple exponential backoff: 2s, 4s, 8s, 16s, 30s (max)
-      const delay = Math.min(2000 * Math.pow(2, this.connectionAttempts - 1), 30000);
+      // More conservative exponential backoff: 5s, 10s, 20s, 40s, 60s (max)
+      const delay = Math.min(5000 * Math.pow(2, this.connectionAttempts - 1), 60000);
       console.log(`[WebSocketService] Attempting to reconnect in ${delay/1000}s (attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`);
 
       this.reconnectTimeoutId = setTimeout(() => {
