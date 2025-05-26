@@ -36,9 +36,26 @@ export default function ChatsScreen() {
 
     switch (message.type) {
       case 'new_message':
-        console.log('[ChatsScreen] New message received, refreshing chatrooms');
-        // Refresh chatrooms to update last message and unread counts
-        fetchChatrooms();
+        console.log('[ChatsScreen] New message received, updating last message');
+        // Don't refresh chatrooms here - let unread_count_update handle the counts
+        // Just update the last message for the specific chatroom
+        if (message.chatroom_id) {
+          setChatrooms(prevChatrooms => {
+            return prevChatrooms.map(chatroom => {
+              if (chatroom.id === message.chatroom_id) {
+                return {
+                  ...chatroom,
+                  last_message: {
+                    content: message.data.text_content || 'New message',
+                    timestamp: message.data.sent_at || new Date().toISOString(),
+                    sender_id: message.data.sender_id
+                  }
+                };
+              }
+              return chatroom;
+            });
+          });
+        }
         break;
 
       case 'message_updated':
@@ -303,6 +320,11 @@ export default function ChatsScreen() {
 
     const isOwn = item.last_message?.sender_id === user?.id;
 
+    // Debug logging for unread count
+    if (item.unread_count && item.unread_count > 0) {
+      console.log(`[ChatsScreen] Rendering ${item.name} with unread_count:`, item.unread_count, typeof item.unread_count);
+    }
+
     return (
       <TouchableOpacity
         style={styles.chatroomItem}
@@ -335,7 +357,7 @@ export default function ChatsScreen() {
                 {item.unread_count && item.unread_count > 0 && (
                   <View style={styles.unreadBadge}>
                     <Text style={styles.unreadBadgeText}>
-                      {item.unread_count > 99 ? '99+' : item.unread_count}
+                      {item.unread_count > 99 ? '99+' : String(item.unread_count)}
                     </Text>
                   </View>
                 )}
