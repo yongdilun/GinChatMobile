@@ -312,14 +312,19 @@ export default function ChatsScreen() {
   };
 
   const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
 
-    if (diffInMinutes < 1) return 'now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
-    return date.toLocaleDateString();
+      if (diffInMinutes < 1) return 'now';
+      if (diffInMinutes < 60) return `${diffInMinutes}m`;
+      if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
+      return String(date.toLocaleDateString());
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'now';
+    }
   };
 
   const renderChatroomItem = ({ item }: { item: Chatroom }) => {
@@ -355,16 +360,16 @@ export default function ChatsScreen() {
             end={{ x: 1, y: 1 }}
           >
             <Text style={styles.chatroomAvatarText}>
-              {item.name.charAt(0).toUpperCase()}
+              {String(item.name || 'U').charAt(0).toUpperCase()}
             </Text>
           </LinearGradient>
 
           <View style={styles.chatroomInfo}>
             <View style={styles.chatroomHeader}>
-              <Text style={styles.chatroomName}>{item.name}</Text>
+              <Text style={styles.chatroomName}>{String(item.name || 'Unknown')}</Text>
               <View style={styles.timeContainer}>
                 {lastMessageTime && (
-                  <Text style={styles.timeText}>{lastMessageTime}</Text>
+                  <Text style={styles.timeText}>{String(lastMessageTime)}</Text>
                 )}
                 {/* Unread count badge */}
                 {(item.unread_count && typeof item.unread_count === 'number' && item.unread_count > 0) && (
@@ -385,7 +390,7 @@ export default function ChatsScreen() {
             <View style={styles.chatroomContent}>
               <Text style={styles.lastMessageText} numberOfLines={1} ellipsizeMode="tail">
                 {isOwn && '◾ '}
-                {lastMessage}
+                {String(lastMessage || 'Start the conversation...')}
               </Text>
 
               <View style={styles.memberBadge}>
@@ -430,7 +435,7 @@ export default function ChatsScreen() {
                 />
                 <Text style={styles.headerTitle}>GinChat Elite</Text>
                 <Text style={styles.headerSubtitle}>
-                  Welcome back, {user?.name}
+                  Welcome back, {user?.name || 'User'}
                 </Text>
                 <View style={styles.statusBadge}>
                   <View style={[styles.statusDot, { backgroundColor: isConnected ? GoldTheme.status.success : GoldTheme.status.warning }]} />
