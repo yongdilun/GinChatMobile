@@ -2035,34 +2035,40 @@ export default function ChatDetailScreen() {
           );
         }
       } else if (messageType === 'message_read') {
-        // OPTIMISTIC: Handle read status updates from WebSocket (copy web approach)
-        const readData = newMessage.data as {
-          message_id?: string;
-          read_status?: any[];
-          user_id?: number;
-          type?: string;
-          chatroom_id?: string;
-          read_all?: boolean;
-        };
+        // FIXED: Handle read status updates from WebSocket with chatroom filtering (copy web approach exactly)
 
-        console.log('[Chat] 📝 Read status update received:', readData);
+        // IMPORTANT: Only process read status updates for the current chatroom
+        if (newMessage.chatroom_id === chatroomId) {
+          const readData = newMessage.data as {
+            message_id?: string;
+            read_status?: any[];
+            user_id?: number;
+            type?: string;
+            chatroom_id?: string;
+            read_all?: boolean;
+          };
 
-        // Handle individual message read status update
-        if (readData.message_id && readData.read_status) {
-          // Only update if this is not the current user (to avoid duplicate updates)
-          if (readData.user_id !== user?.id) {
-            console.log('[Chat] 📝 Processing read status update for message:', readData.message_id);
+          console.log('[Chat] 📝 Read status update received for current chatroom:', readData);
 
-            setMessages(prevMessages =>
-              prevMessages.map(msg =>
-                msg.id === readData.message_id
-                  ? { ...msg, read_status: readData.read_status }
-                  : msg
-              )
-            );
-          } else {
-            console.log('[Chat] 📝 Skipping read status update for current user (already updated optimistically)');
+          // Handle individual message read status update
+          if (readData.message_id && readData.read_status) {
+            // Only update if this is not the current user (to avoid duplicate updates)
+            if (readData.user_id !== user?.id) {
+              console.log('[Chat] 📝 Processing read status update for message:', readData.message_id);
+
+              setMessages(prevMessages =>
+                prevMessages.map(msg =>
+                  msg.id === readData.message_id
+                    ? { ...msg, read_status: readData.read_status }
+                    : msg
+                )
+              );
+            } else {
+              console.log('[Chat] 📝 Skipping read status update for current user (already updated optimistically)');
+            }
           }
+        } else {
+          console.log('[Chat] 📝 Ignoring read status update for different chatroom:', newMessage.chatroom_id, 'vs current:', chatroomId);
         }
       } else if (messageType === 'new_message' || messageType === 'chat_message') {
         // OPTIMISTIC: Handle new message with optimistic updates
