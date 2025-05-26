@@ -300,6 +300,8 @@ export interface Chatroom {
     timestamp: string;
     sender_id: number;
   };
+  // Add unread_count field for sidebar updates
+  unread_count?: number;
 }
 
 // Chat API calls

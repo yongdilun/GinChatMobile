@@ -93,12 +93,13 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       console.log("[WebSocketContext] Connecting to sidebar for global updates");
 
-      // Connect to a special "sidebar" room for global updates
-      currentRoomIdRef.current = "sidebar";
-      setCurrentRoomId("sidebar");
-      await AsyncStorage.setItem('lastConnectedRoom', 'sidebar');
+      // Connect to a special "global" room for sidebar updates (backend expects valid room ID)
+      const sidebarRoomId = "global_sidebar";
+      currentRoomIdRef.current = sidebarRoomId;
+      setCurrentRoomId(sidebarRoomId);
+      await AsyncStorage.setItem('lastConnectedRoom', sidebarRoomId);
 
-      webSocketService.connect("sidebar", token, {
+      webSocketService.connect(sidebarRoomId, token, {
         onOpen: handleOpen,
         onClose: handleClose,
         onError: handleError,
