@@ -1978,9 +1978,8 @@ export default function ChatDetailScreen() {
   const [showMessageActions, setShowMessageActions] = useState(false);
   const [showChatroomActions, setShowChatroomActions] = useState(false);
 
-  // Prevent infinite loop state
-  const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
-  const lastMarkAllReadTime = useRef<number>(0);
+  // Simple read status state
+  const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
 
   // Handler for three-dot menu
   const handleThreeDotMenu = useCallback(() => {
@@ -2034,139 +2033,37 @@ export default function ChatDetailScreen() {
           );
         }
       } else if (messageType === 'message_read') {
-        // Handle read status update
-        const readData = newMessage.data as {
-          message_id?: string;
-          read_status?: any[];
-          user_id?: number;
-          type?: string;
-          chatroom_id?: string;
-          read_all?: boolean;
-        };
-
-        console.log('[Chat] Received message_read WebSocket event:', readData);
-
-        // Handle bulk read status update (new backend feature)
-        if (readData.type === 'bulk_read' && readData.chatroom_id === chatroomId && readData.user_id !== user?.id) {
-          console.log('[Chat] Processing bulk read status update from user:', readData.user_id);
-
-          setMessages(prevMessages =>
-            prevMessages.map(msg => {
-              // Only update messages not sent by the current user
-              if (msg.sender_id !== user?.id) {
-                const updatedReadStatus = msg.read_status ? [...msg.read_status] : [];
-                const userReadIndex = updatedReadStatus.findIndex(status => status.user_id === readData.user_id);
-
-                if (userReadIndex >= 0) {
-                  // Update existing read status
-                  updatedReadStatus[userReadIndex] = {
-                    ...updatedReadStatus[userReadIndex],
-                    is_read: true,
-                    read_at: new Date().toISOString()
-                  };
-                } else {
-                  // Add new read status (we don't have username from bulk update)
-                  updatedReadStatus.push({
-                    user_id: readData.user_id!,
-                    username: `User ${readData.user_id}`,
-                    is_read: true,
-                    read_at: new Date().toISOString()
-                  });
-                }
-
-                return { ...msg, read_status: updatedReadStatus };
-              }
-              return msg;
-            })
-          );
-        }
-        // Handle individual message read status update
-        else if (readData.message_id && readData.read_status) {
-          // Only update if this is not the current user (to avoid duplicate updates)
-          if (readData.user_id !== user?.id) {
-            console.log('[Chat] Processing individual message read status update for message:', readData.message_id);
-
-            setMessages(prevMessages =>
-              prevMessages.map(msg =>
-                msg.id === readData.message_id
-                  ? { ...msg, read_status: readData.read_status }
-                  : msg
-              )
-            );
-          } else {
-            console.log('[Chat] Skipping read status update for current user (already updated optimistically)');
-          }
-        }
+        // SIMPLE: Just refresh messages when read status changes
+        console.log('[Chat] 📝 Read status update received, refreshing messages');
+        fetchMessages();
       } else if (messageType === 'new_message' || messageType === 'chat_message') {
-        // Handle new message
+        // SIMPLE: Just refresh messages when new message arrives
+        console.log('[Chat] 📝 New message received, refreshing messages');
         const messageData = newMessage.data as Message;
 
-        if (messageData.id && !processedMessages.current.has(messageData.id)) {
+        // Add to processed set to avoid duplicates
+        if (messageData.id) {
           processedMessages.current.add(messageData.id);
+        }
 
-          setMessages(prevMessages => {
-            const messageExists = prevMessages.some(msg => msg.id === messageData.id);
-            if (!messageExists) {
-              const updatedMessages = [messageData, ...prevMessages];
-              return updatedMessages.sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
-            }
-            return prevMessages;
-          });
+        // Refresh messages and auto-mark as read
+        await fetchMessages();
 
-          // Auto-mark new messages as read when received in this chat
-          if (messageData.sender_id !== user?.id) {
-            console.log('[Chat] Auto-marking new message as read:', messageData.id);
-            markMessageAsRead(messageData.id);
-          }
+        // Auto-mark new messages as read if from others
+        if (messageData.sender_id !== user?.id && messageData.id) {
+          console.log('[Chat] 📝 Auto-marking new message as read:', messageData.id);
+          await markMessageAsRead(messageData.id);
         }
       }
     }
   };
 
-  // Mark a specific message as read
+  // SIMPLE: Mark a specific message as read
   const markMessageAsRead = async (messageId: string) => {
     if (!user?.token || !user?.id) return;
 
-    console.log('[Chat] Marking message as read (optimistic):', messageId, 'User ID:', user.id);
+    console.log('[Chat] 📝 Marking message as read:', messageId);
 
-    // OPTIMISTIC UPDATE: Update UI immediately for instant feedback
-    setMessages(prevMessages =>
-      prevMessages.map(msg => {
-        if (msg.id === messageId) {
-          console.log('[Chat] Updating read status for message:', messageId, 'Current read_status:', msg.read_status);
-
-          // Initialize read_status if it doesn't exist
-          const updatedReadStatus = Array.isArray(msg.read_status) ? [...msg.read_status] : [];
-          const userReadIndex = updatedReadStatus.findIndex(status => status.user_id === user.id);
-
-          if (userReadIndex >= 0) {
-            // Update existing read status
-            console.log('[Chat] Updating existing read status for user:', user.id);
-            updatedReadStatus[userReadIndex] = {
-              ...updatedReadStatus[userReadIndex],
-              is_read: true,
-              read_at: new Date().toISOString()
-            };
-          } else {
-            // Add new read status
-            console.log('[Chat] Adding new read status for user:', user.id);
-            updatedReadStatus.push({
-              user_id: user.id,
-              username: user.name || user.email || `User ${user.id}`,
-              is_read: true,
-              read_at: new Date().toISOString()
-            });
-          }
-
-          const updatedMessage = { ...msg, read_status: updatedReadStatus };
-          console.log('[Chat] Updated message read status:', updatedMessage.read_status);
-          return updatedMessage;
-        }
-        return msg;
-      })
-    );
-
-    // API call in background (non-blocking)
     try {
       const response = await fetch(`${API_URL}/messages/read`, {
         method: 'POST',
@@ -2178,14 +2075,12 @@ export default function ChatDetailScreen() {
       });
 
       if (response.ok) {
-        console.log('[Chat] Successfully marked message as read (confirmed)');
+        console.log('[Chat] ✅ Successfully marked message as read');
       } else {
-        console.error('[Chat] Failed to mark message as read:', response.status);
-        // TODO: Could implement rollback here if needed
+        console.error('[Chat] ❌ Failed to mark message as read:', response.status);
       }
     } catch (error) {
-      console.error('[Chat] Error marking message as read:', error);
-      // TODO: Could implement rollback here if needed
+      console.error('[Chat] ❌ Error marking message as read:', error);
     }
   };
 
@@ -2225,13 +2120,9 @@ export default function ChatDetailScreen() {
   };
 
   const fetchMessages = async () => {
-    console.log('[Chat] 📥 fetchMessages called with chatroomId:', chatroomId);
-    console.log('[Chat] 📥 Current state:', { markingAllAsRead });
+    if (!chatroomId) return;
 
-    if (!chatroomId) {
-      console.log('[Chat] 📥 No chatroomId, returning early');
-      return;
-    }
+    console.log('[Chat] 📥 Fetching messages for chatroom:', chatroomId);
 
     try {
       setLoading(true);
@@ -2240,17 +2131,16 @@ export default function ChatDetailScreen() {
         new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
       );
 
-      // Debug logging for fetched messages
-      console.log('[Chat] Fetched', sortedMessages.length, 'messages');
+      console.log('[Chat] 📥 Fetched', sortedMessages.length, 'messages');
+
+      // Add message IDs to processed set
       sortedMessages.forEach(msg => {
-        console.log(`[Chat] Message ${msg.id} read_status:`, msg.read_status);
         if (msg.id) processedMessages.current.add(msg.id);
       });
 
       setMessages(sortedMessages);
 
-      // Auto-mark all messages as read when entering chatroom
-      console.log('[Chat] Auto-marking messages as read when entering chatroom');
+      // SIMPLE: Mark all as read when entering chatroom
       await markAllMessagesAsRead();
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -2260,67 +2150,15 @@ export default function ChatDetailScreen() {
     }
   };
 
-  // Mark all messages in chatroom as read (simplified and fixed)
+  // SIMPLE: Mark all messages as read - no complex logic
   const markAllMessagesAsRead = async () => {
-    if (!chatroomId || !user?.token || !user?.id) {
-      console.log('[Chat] Skipping mark all as read - missing required data:', { chatroomId: !!chatroomId, token: !!user?.token, userId: !!user?.id });
+    if (!chatroomId || !user?.token || !user?.id || isMarkingAsRead) {
       return;
     }
 
-    // Prevent concurrent calls
-    if (markingAllAsRead) {
-      console.log('[Chat] 🛑 BLOCKED mark all as read - already in progress');
-      return;
-    }
+    console.log('[Chat] 📝 Marking all messages as read for chatroom:', chatroomId);
+    setIsMarkingAsRead(true);
 
-    // Simple debounce check - prevent calls within 2 seconds
-    const now = Date.now();
-    if (now - lastMarkAllReadTime.current < 2000) {
-      console.log('[Chat] 🛑 BLOCKED mark all as read - debounce protection (2s cooldown)');
-      return;
-    }
-    lastMarkAllReadTime.current = now;
-
-    console.log('[Chat] ✅ PROCEEDING with mark all as read for chatroom:', chatroomId, 'User ID:', user.id);
-    setMarkingAllAsRead(true);
-
-    // OPTIMISTIC UPDATE: Update UI immediately for instant feedback
-    setMessages(prevMessages => {
-      console.log('[Chat] Processing', prevMessages.length, 'messages for mark all as read');
-
-      return prevMessages.map(msg => {
-        // Only update messages that are not sent by the current user
-        if (msg.sender_id !== user.id) {
-          console.log('[Chat] Marking message as read:', msg.id, 'from sender:', msg.sender_id);
-
-          // Initialize read_status if it doesn't exist
-          const updatedReadStatus = Array.isArray(msg.read_status) ? [...msg.read_status] : [];
-          const userReadIndex = updatedReadStatus.findIndex(status => status.user_id === user.id);
-
-          if (userReadIndex >= 0) {
-            // Update existing read status
-            updatedReadStatus[userReadIndex] = {
-              ...updatedReadStatus[userReadIndex],
-              is_read: true,
-              read_at: new Date().toISOString()
-            };
-          } else {
-            // Add new read status
-            updatedReadStatus.push({
-              user_id: user.id,
-              username: user.name || user.email || `User ${user.id}`,
-              is_read: true,
-              read_at: new Date().toISOString()
-            });
-          }
-
-          return { ...msg, read_status: updatedReadStatus };
-        }
-        return msg;
-      });
-    });
-
-    // API call in background (non-blocking)
     try {
       const response = await fetch(`${API_URL}/chatrooms/${chatroomId}/mark-all-read`, {
         method: 'POST',
@@ -2331,30 +2169,23 @@ export default function ChatDetailScreen() {
       });
 
       if (response.ok) {
-        console.log('[Chat] Successfully marked all messages as read (confirmed)');
+        console.log('[Chat] ✅ Successfully marked all messages as read');
       } else {
-        console.error('[Chat] Failed to mark messages as read:', response.status);
+        console.error('[Chat] ❌ Failed to mark messages as read:', response.status);
       }
     } catch (error) {
-      console.error('[Chat] Error marking messages as read:', error);
+      console.error('[Chat] ❌ Error marking messages as read:', error);
     } finally {
-      setMarkingAllAsRead(false);
+      setIsMarkingAsRead(false);
     }
   };
 
   useEffect(() => {
-    console.log('[Chat] 🔄 useEffect triggered with chatroomId:', chatroomId);
-
     if (chatroomId) {
-      // Reset mark-all-read state when changing chatrooms
-      console.log('[Chat] 🔄 Resetting mark-all-read state for new chatroom');
-      setMarkingAllAsRead(false);
-
-      console.log('[Chat] 🔄 Calling fetchChatroom and fetchMessages');
+      console.log('[Chat] 🔄 Loading chatroom:', chatroomId);
+      setIsMarkingAsRead(false); // Reset state
       fetchChatroom();
       fetchMessages();
-    } else {
-      console.log('[Chat] 🔄 No chatroomId, skipping fetch');
     }
   }, [chatroomId]);
 
