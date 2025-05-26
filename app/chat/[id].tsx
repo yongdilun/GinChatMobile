@@ -1990,6 +1990,7 @@ export default function ChatDetailScreen() {
 
   const {
     connectToRoom,
+    disconnectFromRoom,
     addMessageHandler,
     removeMessageHandler,
   } = useWebSocket();
@@ -2162,11 +2163,13 @@ export default function ChatDetailScreen() {
       }, 100);
 
       return () => {
-        console.log('[Chat] Cleaning up WebSocket connection');
+        console.log('[Chat] Cleaning up WebSocket connection for room:', chatroomId);
         clearTimeout(connectTimer);
         removeMessageHandler(handleIncomingMessage);
-        // Don't disconnect immediately - let the context handle it
-        // This prevents unnecessary disconnections when navigating between chats
+        // IMPORTANT: Disconnect from current room when leaving chat
+        // This ensures we don't stay connected to rooms we're not viewing
+        disconnectFromRoom();
+        console.log('[Chat] ✅ Disconnected from WebSocket room:', chatroomId);
       };
     }
   }, [chatroomId, user?.id]);
@@ -2293,8 +2296,12 @@ export default function ChatDetailScreen() {
       return () => {
         console.log('[Chat] 🔄 Screen unfocused, setting isScreenFocused to false');
         setIsScreenFocused(false);
+        // IMPORTANT: Disconnect from WebSocket room when screen loses focus
+        // This ensures we don't stay connected to rooms we're not actively viewing
+        console.log('[Chat] 🔄 Screen unfocused, disconnecting from WebSocket room');
+        disconnectFromRoom();
       };
-    }, [])
+    }, [disconnectFromRoom])
   );
 
   // Auto-mark all messages as read ONLY when screen is focused AND messages are loaded
