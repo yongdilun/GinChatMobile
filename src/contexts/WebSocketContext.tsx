@@ -1,6 +1,6 @@
 // GinChatMobile/src/contexts/WebSocketContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import webSocketService from '@/services/WebSocketService'; // Import the singleton instance
+import robustWebSocketService from '@/services/RobustWebSocketService'; // Import the new robust service
 import { useAuth } from './AuthContext'; // To get the token
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -18,12 +18,14 @@ interface WebSocketContextType {
   addMessageHandler: (handler: (message: WebSocketMessage) => void) => void;
   removeMessageHandler: (handler: (message: WebSocketMessage) => void) => void;
   sendMessage: (data: object) => boolean; // Allow sending generic messages if needed
+  getConnectionState: () => string;
+  getStats: () => object;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
 export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isConnected, setIsConnected] = useState(webSocketService.isConnected());
+  const [isConnected, setIsConnected] = useState(robustWebSocketService.isConnected());
   const { token } = useAuth();
   const currentRoomIdRef = useRef<string | null>(null);
 
@@ -67,7 +69,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
       currentRoomIdRef.current = roomId;
       await AsyncStorage.setItem('lastConnectedRoom', roomId);
 
-      webSocketService.connect(roomId, token, {
+      robustWebSocketService.connect(roomId, token, {
         onOpen: handleOpen,
         onClose: handleClose,
         onError: handleError,
@@ -81,26 +83,34 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     console.log("[WebSocketContext] Disconnecting from room");
     currentRoomIdRef.current = null;
     AsyncStorage.removeItem('lastConnectedRoom').catch(console.error);
-    webSocketService.disconnect();
+    robustWebSocketService.disconnect();
     setIsConnected(false);
   }, []);
 
   const addMessageHandler = useCallback((handler: (message: WebSocketMessage) => void) => {
-    webSocketService.addMessageHandler(handler);
+    robustWebSocketService.addMessageHandler(handler);
   }, []);
 
   const removeMessageHandler = useCallback((handler: (message: WebSocketMessage) => void) => {
-    webSocketService.removeMessageHandler(handler);
+    robustWebSocketService.removeMessageHandler(handler);
   }, []);
 
   const sendMessage = useCallback((data: object): boolean => {
-    return webSocketService.sendMessage(data);
+    return robustWebSocketService.sendMessage(data);
+  }, []);
+
+  const getConnectionState = useCallback((): string => {
+    return robustWebSocketService.getConnectionState();
+  }, []);
+
+  const getStats = useCallback((): object => {
+    return robustWebSocketService.getStats();
   }, []);
 
   // Effect to update connection status
   useEffect(() => {
     const checkConnectionStatus = () => {
-      const currentStatus = webSocketService.isConnected();
+      const currentStatus = robustWebSocketService.isConnected();
       if (isConnected !== currentStatus) {
         console.log(`[WebSocketContext] Connection status changed: ${currentStatus}`);
         setIsConnected(currentStatus);
@@ -117,7 +127,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Effect to handle reconnection on token change
   useEffect(() => {
     const reconnectToLastRoom = async () => {
-      if (token && !webSocketService.isConnected()) {
+      if (token && !robustWebSocketService.isConnected()) {
         try {
           // Try to get the last connected room
           const lastRoom = await AsyncStorage.getItem('lastConnectedRoom');
@@ -142,7 +152,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     return () => {
       if (currentRoomIdRef.current) {
         console.log("[WebSocketContext] Cleaning up WebSocket connection");
-        webSocketService.disconnect();
+        robustWebSocketService.disconnect();
       }
     };
   }, [token, connectToRoom]);
@@ -156,6 +166,8 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
         addMessageHandler,
         removeMessageHandler,
         sendMessage,
+        getConnectionState,
+        getStats,
       }}
     >
       {children}
