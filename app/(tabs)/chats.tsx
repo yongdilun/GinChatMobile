@@ -14,7 +14,7 @@ import { GoldTheme } from '../../constants/GoldTheme';
 
 export default function ChatsScreen() {
   const { user, logout } = useAuth();
-  const { connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, isConnected } = useWebSocket();
+  const { connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, isConnected, currentRoomId } = useWebSocket();
   const [chatrooms, setChatrooms] = useState<Chatroom[]>([]);
   const [availableChatrooms, setAvailableChatrooms] = useState<Chatroom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,16 +80,17 @@ export default function ChatsScreen() {
     }
   }, []);
 
-  // Connect to sidebar WebSocket when component mounts (only if not already connected)
+  // Connect to sidebar WebSocket when component mounts
   useEffect(() => {
     console.log('[ChatsScreen] Component mounted, setting up sidebar WebSocket');
+    console.log('[ChatsScreen] Current connection state - isConnected:', isConnected, 'currentRoomId:', currentRoomId);
 
-    // Only connect if we're not already connected to a room
-    if (!isConnected) {
-      console.log('[ChatsScreen] Not connected, connecting to sidebar');
+    // Connect to sidebar if not already connected to sidebar
+    if (!isConnected || currentRoomId !== 'global_sidebar') {
+      console.log('[ChatsScreen] Connecting to sidebar for global updates');
       connectToSidebar();
     } else {
-      console.log('[ChatsScreen] Already connected, skipping sidebar connection');
+      console.log('[ChatsScreen] Already connected to sidebar, skipping connection');
     }
 
     addMessageHandler(handleWebSocketMessage);
@@ -98,7 +99,7 @@ export default function ChatsScreen() {
       console.log('[ChatsScreen] Component unmounting, cleaning up WebSocket');
       removeMessageHandler(handleWebSocketMessage);
       // Don't disconnect if we're connected to a chat room
-      if (currentRoomId === 'global_sidebar') {
+      if (currentRoomId && currentRoomId === 'global_sidebar') {
         disconnectFromSidebar();
       }
     };
