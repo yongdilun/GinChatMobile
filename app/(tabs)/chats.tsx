@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Text, Alert, Modal, View, TextInput, StatusBar, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -7,12 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { chatAPI, Chatroom } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWebSocket, WebSocketMessage } from '@/contexts/WebSocketContext';
 import { GoldButton } from '../../src/components/GoldButton';
 import { GoldInput } from '../../src/components/GoldInput';
 import { GoldTheme } from '../../constants/GoldTheme';
 
 export default function ChatsScreen() {
   const { user, logout } = useAuth();
+  const { connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, isConnected } = useWebSocket();
   const [chatrooms, setChatrooms] = useState<Chatroom[]>([]);
   const [availableChatrooms, setAvailableChatrooms] = useState<Chatroom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +29,64 @@ export default function ChatsScreen() {
   const [joining, setJoining] = useState(false);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
 
+  // WebSocket message handler for sidebar updates
+  const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
+    console.log('[ChatsScreen] Received WebSocket message:', message.type);
+
+    switch (message.type) {
+      case 'new_message':
+        console.log('[ChatsScreen] New message received, refreshing chatrooms');
+        // Refresh chatrooms to update last message and unread counts
+        fetchChatrooms();
+        break;
+
+      case 'message_updated':
+        console.log('[ChatsScreen] Message updated, refreshing chatrooms');
+        fetchChatrooms();
+        break;
+
+      case 'message_deleted':
+        console.log('[ChatsScreen] Message deleted, refreshing chatrooms');
+        fetchChatrooms();
+        break;
+
+      case 'unread_count_update':
+        console.log('[ChatsScreen] Unread count update received:', message.data);
+        // Update chatrooms with new unread counts
+        if (Array.isArray(message.data)) {
+          setChatrooms(prevChatrooms => {
+            return prevChatrooms.map(chatroom => {
+              const updateData = message.data.find((item: any) => item.chatroom_id === chatroom.id);
+              if (updateData) {
+                return {
+                  ...chatroom,
+                  unread_count: updateData.unread_count || 0
+                };
+              }
+              return chatroom;
+            });
+          });
+        }
+        break;
+
+      default:
+        console.log('[ChatsScreen] Unhandled message type:', message.type);
+    }
+  }, []);
+
+  // Connect to sidebar WebSocket when component mounts
+  useEffect(() => {
+    console.log('[ChatsScreen] Component mounted, connecting to sidebar WebSocket');
+    connectToSidebar();
+    addMessageHandler(handleWebSocketMessage);
+
+    return () => {
+      console.log('[ChatsScreen] Component unmounting, cleaning up WebSocket');
+      removeMessageHandler(handleWebSocketMessage);
+      disconnectFromSidebar();
+    };
+  }, [connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, handleWebSocketMessage]);
+
   useEffect(() => {
     fetchChatrooms();
   }, []);
@@ -35,10 +95,10 @@ export default function ChatsScreen() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await chatAPI.getConversations();
       setChatrooms(response.chatrooms || []);
-      
+
     } catch (err) {
       console.error('Error fetching chatrooms:', err);
       setError('Failed to load chatrooms');
@@ -79,7 +139,7 @@ export default function ChatsScreen() {
 
   const handleJoinChatroom = async (chatroomId?: string) => {
     const idToJoin = chatroomId || chatroomIdToJoin.trim();
-    
+
     if (!idToJoin) {
       Alert.alert('Error', 'Please select a chatroom to join');
       return;
@@ -103,19 +163,19 @@ export default function ChatsScreen() {
   const fetchAvailableChatrooms = async () => {
     try {
       setLoadingAvailable(true);
-      
+
       // Get user's current chatrooms
       const myChatsResponse = await chatAPI.getConversations();
       const userChatroomIds = new Set((myChatsResponse.chatrooms || []).map(chat => chat.id));
-      
+
       // Get all available chatrooms
       const allChatsResponse = await chatAPI.getAllAvailableChatrooms();
-      
+
       // Filter out chatrooms the user has already joined
       const availableChats = (allChatsResponse.chatrooms || []).filter(
         chat => !userChatroomIds.has(chat.id)
       );
-      
+
       setAvailableChatrooms(availableChats);
     } catch (error) {
       console.error('Error fetching available chatrooms:', error);
@@ -192,7 +252,7 @@ export default function ChatsScreen() {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
+
     if (diffInMinutes < 1) return 'now';
     if (diffInMinutes < 60) return `${diffInMinutes}m`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
@@ -230,7 +290,7 @@ export default function ChatsScreen() {
               {item.name.charAt(0).toUpperCase()}
             </Text>
           </LinearGradient>
-          
+
           <View style={styles.chatroomInfo}>
             <View style={styles.chatroomHeader}>
               <Text style={styles.chatroomName}>{item.name}</Text>
@@ -238,25 +298,33 @@ export default function ChatsScreen() {
                 {lastMessageTime && (
                   <Text style={styles.timeText}>{lastMessageTime}</Text>
                 )}
-                <Ionicons 
-                  name="chevron-forward" 
-                  size={16} 
-                  color={GoldTheme.gold.primary} 
+                {/* Unread count badge */}
+                {item.unread_count && item.unread_count > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadBadgeText}>
+                      {item.unread_count > 99 ? '99+' : item.unread_count}
+                    </Text>
+                  </View>
+                )}
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={GoldTheme.gold.primary}
                 />
               </View>
             </View>
-            
+
             <View style={styles.chatroomContent}>
               <Text style={styles.lastMessageText} numberOfLines={1} ellipsizeMode="tail">
                 {isOwn && '◾ '}
                 {lastMessage}
               </Text>
-              
+
               <View style={styles.memberBadge}>
-                <Ionicons 
-                  name="people" 
-                  size={12} 
-                  color={GoldTheme.gold.primary} 
+                <Ionicons
+                  name="people"
+                  size={12}
+                  color={GoldTheme.gold.primary}
                 />
                 <Text style={styles.memberBadgeText}>
                   {item.members.length}
@@ -286,7 +354,7 @@ export default function ChatsScreen() {
               >
                 <Text style={styles.headerLogoText}>G</Text>
               </LinearGradient>
-              
+
               <View style={styles.titleContainer}>
                 <LinearGradient
                   colors={['rgba(255, 215, 0, 0.1)', 'transparent']}
@@ -297,12 +365,14 @@ export default function ChatsScreen() {
                   Welcome back, {user?.name}
                 </Text>
                 <View style={styles.statusBadge}>
-                  <View style={styles.statusDot} />
-                  <Text style={styles.statusText}>Premium Messaging</Text>
+                  <View style={[styles.statusDot, { backgroundColor: isConnected ? GoldTheme.status.success : GoldTheme.status.warning }]} />
+                  <Text style={styles.statusText}>
+                    {isConnected ? 'Live Updates Active' : 'Connecting...'}
+                  </Text>
                 </View>
               </View>
             </View>
-            
+
             <View style={styles.headerActions}>
               <TouchableOpacity
                 style={styles.logoutButton}
@@ -337,7 +407,7 @@ export default function ChatsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          
+
           {/* Enhanced decorative elements */}
           <View style={styles.headerDecorations}>
             <View style={styles.decorativeLine} />
@@ -377,7 +447,7 @@ export default function ChatsScreen() {
 
   const renderFooter = () => {
     if (chatrooms.length === 0) return null;
-    
+
     return (
       <View style={styles.footer}>
         <LinearGradient
@@ -397,7 +467,7 @@ export default function ChatsScreen() {
             </View>
             <View style={styles.decorativeLine} />
           </View>
-          
+
           {/* App Info */}
           <View style={styles.footerContent}>
             <LinearGradient
@@ -408,7 +478,7 @@ export default function ChatsScreen() {
             >
               <Text style={styles.footerLogoText}>G</Text>
             </LinearGradient>
-            
+
             <View style={styles.footerInfo}>
               <Text style={styles.footerTitle}>GinChat Elite</Text>
               <Text style={styles.footerSubtitle}>Premium Messaging Experience</Text>
@@ -418,7 +488,7 @@ export default function ChatsScreen() {
               </View>
             </View>
           </View>
-          
+
           {/* Version Info */}
           <View style={styles.versionInfo}>
             <Text style={styles.versionText}>Version 1.0.0 • Built with ❤️</Text>
@@ -434,9 +504,9 @@ export default function ChatsScreen() {
       style={styles.container}
     >
       <StatusBar barStyle="light-content" backgroundColor={GoldTheme.background.primary} />
-      
+
       {renderHeader()}
-      
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={GoldTheme.gold.primary} />
@@ -487,7 +557,7 @@ export default function ChatsScreen() {
               style={styles.modalGradient}
             >
               <Text style={styles.modalTitle}>Choose Action</Text>
-              
+
               <View style={styles.modalButtons}>
                 <GoldButton
                   title="Create New Room"
@@ -508,7 +578,7 @@ export default function ChatsScreen() {
                   variant="outline"
                   style={styles.modalButton}
                 />
-                
+
                 <GoldButton
                   title="Cancel"
                   onPress={() => setShowActionModal(false)}
@@ -535,7 +605,7 @@ export default function ChatsScreen() {
               style={styles.modalGradient}
             >
               <Text style={styles.modalTitle}>Create Chat Room</Text>
-              
+
               <GoldInput
                 label="Room Name"
                 placeholder="Enter a name for your room"
@@ -544,7 +614,7 @@ export default function ChatsScreen() {
                 icon={<Ionicons name="chatbubble-outline" size={20} color={GoldTheme.gold.primary} />}
                 containerStyle={styles.inputContainer}
               />
-              
+
               <View style={styles.modalButtons}>
                 <GoldButton
                   title={creating ? "Creating..." : "Create Room"}
@@ -552,7 +622,7 @@ export default function ChatsScreen() {
                   disabled={creating}
                   style={styles.modalButton}
                 />
-                
+
                 <GoldButton
                   title="Cancel"
                   onPress={() => {
@@ -582,7 +652,7 @@ export default function ChatsScreen() {
               style={styles.modalGradient}
             >
               <Text style={styles.modalTitle}>Available Chat Rooms</Text>
-              
+
               {loadingAvailable ? (
                 <View style={styles.loadingAvailableContainer}>
                   <ActivityIndicator size="large" color={GoldTheme.gold.primary} />
@@ -607,7 +677,7 @@ export default function ChatsScreen() {
                               {item.name.charAt(0).toUpperCase()}
                             </Text>
                           </LinearGradient>
-                          
+
                           <View style={styles.availableChatroomInfo}>
                             <Text style={styles.availableChatroomName}>{item.name}</Text>
                             <View style={styles.availableChatroomDetails}>
@@ -625,7 +695,7 @@ export default function ChatsScreen() {
                               </View>
                             </View>
                           </View>
-                          
+
                           <TouchableOpacity
                             style={styles.joinButton}
                             onPress={() => handleJoinChatroom(item.id)}
@@ -660,7 +730,7 @@ export default function ChatsScreen() {
                   )}
                 </>
               )}
-              
+
               <View style={styles.modalButtons}>
                 <GoldButton
                   title="Cancel"
@@ -869,6 +939,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: GoldTheme.text.muted,
     marginRight: 4,
+  },
+  unreadBadge: {
+    backgroundColor: GoldTheme.status.error,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
+    paddingHorizontal: 6,
+  },
+  unreadBadgeText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   chatroomContent: {
     flexDirection: 'row',

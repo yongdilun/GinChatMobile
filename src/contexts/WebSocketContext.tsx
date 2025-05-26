@@ -15,6 +15,9 @@ interface WebSocketContextType {
   isConnected: boolean;
   connectToRoom: (roomId: string) => void;
   disconnectFromRoom: () => void;
+  connectToSidebar: () => void; // New: Connect to sidebar for global updates
+  disconnectFromSidebar: () => void; // New: Disconnect from sidebar
+  currentRoomId: string | null; // New: Track current room
   addMessageHandler: (handler: (message: WebSocketMessage) => void) => void;
   removeMessageHandler: (handler: (message: WebSocketMessage) => void) => void;
   sendMessage: (data: object) => boolean; // Allow sending generic messages if needed
@@ -26,6 +29,7 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(undefin
 
 export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(webSocketService.isConnected());
+  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const { token } = useAuth();
   const currentRoomIdRef = useRef<string | null>(null);
 
@@ -67,6 +71,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
 
       // Store the current room ID
       currentRoomIdRef.current = roomId;
+      setCurrentRoomId(roomId);
       await AsyncStorage.setItem('lastConnectedRoom', roomId);
 
       webSocketService.connect(roomId, token, {
@@ -79,9 +84,43 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   }, [token, handleOpen, handleClose, handleError]);
 
+  const connectToSidebar = useCallback(async () => {
+    if (!token) {
+      console.error("[WebSocketContext] Cannot connect to sidebar: auth token not available");
+      return;
+    }
+
+    try {
+      console.log("[WebSocketContext] Connecting to sidebar for global updates");
+
+      // Connect to a special "sidebar" room for global updates
+      currentRoomIdRef.current = "sidebar";
+      setCurrentRoomId("sidebar");
+      await AsyncStorage.setItem('lastConnectedRoom', 'sidebar');
+
+      webSocketService.connect("sidebar", token, {
+        onOpen: handleOpen,
+        onClose: handleClose,
+        onError: handleError,
+      });
+    } catch (error) {
+      console.error("[WebSocketContext] Error connecting to sidebar:", error);
+    }
+  }, [token, handleOpen, handleClose, handleError]);
+
   const disconnectFromRoom = useCallback(() => {
     console.log("[WebSocketContext] Disconnecting from room");
     currentRoomIdRef.current = null;
+    setCurrentRoomId(null);
+    AsyncStorage.removeItem('lastConnectedRoom').catch(console.error);
+    webSocketService.disconnect();
+    setIsConnected(false);
+  }, []);
+
+  const disconnectFromSidebar = useCallback(() => {
+    console.log("[WebSocketContext] Disconnecting from sidebar");
+    currentRoomIdRef.current = null;
+    setCurrentRoomId(null);
     AsyncStorage.removeItem('lastConnectedRoom').catch(console.error);
     webSocketService.disconnect();
     setIsConnected(false);
@@ -166,6 +205,9 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
         isConnected,
         connectToRoom,
         disconnectFromRoom,
+        connectToSidebar,
+        disconnectFromSidebar,
+        currentRoomId,
         addMessageHandler,
         removeMessageHandler,
         sendMessage,
