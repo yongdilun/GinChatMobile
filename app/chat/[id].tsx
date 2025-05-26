@@ -2046,13 +2046,13 @@ export default function ChatDetailScreen() {
           processedMessages.current.add(messageData.id);
         }
 
-        // Refresh messages and auto-mark as read
-        await fetchMessages();
+        // Refresh messages and auto-mark as read (non-blocking)
+        fetchMessages();
 
-        // Auto-mark new messages as read if from others
+        // Auto-mark new messages as read if from others (non-blocking)
         if (messageData.sender_id !== user?.id && messageData.id) {
           console.log('[Chat] 📝 Auto-marking new message as read:', messageData.id);
-          await markMessageAsRead(messageData.id);
+          markMessageAsRead(messageData.id);
         }
       }
     }
