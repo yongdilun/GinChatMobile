@@ -115,20 +115,25 @@ export default function ChatsScreen() {
 
     // Only connect to sidebar if not already connected to it
     if (currentRoomId !== 'global_sidebar') {
-      console.log('[ChatsScreen] Connecting to sidebar for global updates');
-      // Add a small delay to prevent rapid reconnections
+      console.log('[ChatsScreen] 🔌 Connecting to sidebar for global updates');
+      // FIXED: Longer delay to coordinate with chat screen disconnections
       const connectTimer = setTimeout(() => {
+        console.log('[ChatsScreen] 🔌 Connecting to sidebar after delay');
         connectToSidebar();
-      }, 500);
+      }, 1200); // Increased from 500ms to 1200ms to coordinate with chat screen
 
       return () => {
-        console.log('[ChatsScreen] Component unmounting, cleaning up WebSocket');
+        console.log('[ChatsScreen] 🔌 Component unmounting, cleaning up WebSocket');
         clearTimeout(connectTimer);
         removeMessageHandler(handleWebSocketMessage);
-        // Don't disconnect if we're connected to a chat room
-        if (currentRoomId && currentRoomId === 'global_sidebar') {
-          disconnectFromSidebar();
-        }
+
+        // FIXED: Add delay before disconnecting to prevent connection conflicts
+        setTimeout(() => {
+          if (currentRoomId && currentRoomId === 'global_sidebar') {
+            console.log('[ChatsScreen] 🔌 Disconnecting from sidebar after delay');
+            disconnectFromSidebar();
+          }
+        }, 200);
       };
     } else {
       console.log('[ChatsScreen] Already connected to sidebar, skipping connection');

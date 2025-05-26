@@ -33,7 +33,7 @@ interface WebSocketServiceOptions {
     private connectionStabilityTimer: ReturnType<typeof setTimeout> | null = null;
     private consecutiveFailures: number = 0;
     private lastConnectionAttempt: number = 0; // Track last connection attempt
-    private connectionThrottleMs: number = 2000; // Minimum 2 seconds between connections
+    private connectionThrottleMs: number = 3000; // FIXED: Minimum 3 seconds between connections to prevent rapid conflicts
 
     private defaultOptions: WebSocketServiceOptions = {
       onOpen: () => console.log("[WebSocketService] Connection opened."),
@@ -71,10 +71,10 @@ interface WebSocketServiceOptions {
         this.currentToken = token;
         this.disconnect();
 
-        // Shorter delay for room switching
+        // FIXED: Longer delay for room switching to prevent connection conflicts
         setTimeout(() => {
           this._initiateConnection(roomId, token, options);
-        }, 500); // Increased delay
+        }, 1000); // Increased from 500ms to 1000ms to prevent rapid connection conflicts
         return;
       }
 

@@ -2155,27 +2155,30 @@ export default function ChatDetailScreen() {
     }
   };
 
-  // Connect to WebSocket
+  // Connect to WebSocket with improved connection management
   useEffect(() => {
     if (chatroomId && user?.id) {
-      console.log('[Chat] Setting up WebSocket connection for room:', chatroomId);
+      console.log('[Chat] 🔌 Setting up WebSocket connection for room:', chatroomId);
 
       // Add message handler first
       addMessageHandler(handleIncomingMessage);
 
-      // Connect to room with a small delay to ensure handler is registered
+      // FIXED: Longer delay to prevent rapid connection conflicts
       const connectTimer = setTimeout(() => {
+        console.log('[Chat] 🔌 Connecting to WebSocket room after delay:', chatroomId);
         connectToRoom(chatroomId);
-      }, 100);
+      }, 800); // Increased from 100ms to 800ms to prevent rapid connection conflicts
 
       return () => {
-        console.log('[Chat] Cleaning up WebSocket connection for room:', chatroomId);
+        console.log('[Chat] 🔌 Cleaning up WebSocket connection for room:', chatroomId);
         clearTimeout(connectTimer);
         removeMessageHandler(handleIncomingMessage);
-        // IMPORTANT: Disconnect from current room when leaving chat
-        // This ensures we don't stay connected to rooms we're not viewing
-        disconnectFromRoom();
-        console.log('[Chat] ✅ Disconnected from WebSocket room:', chatroomId);
+
+        // FIXED: Add delay before disconnecting to prevent connection conflicts
+        setTimeout(() => {
+          console.log('[Chat] 🔌 Disconnecting from WebSocket room after delay:', chatroomId);
+          disconnectFromRoom();
+        }, 200); // Small delay to ensure cleanup happens after navigation
       };
     }
   }, [chatroomId, user?.id]);
@@ -2302,12 +2305,12 @@ export default function ChatDetailScreen() {
       return () => {
         console.log('[Chat] 🔄 Screen unfocused, setting isScreenFocused to false');
         setIsScreenFocused(false);
-        // IMPORTANT: Disconnect from WebSocket room when screen loses focus
-        // This ensures we don't stay connected to rooms we're not actively viewing
-        console.log('[Chat] 🔄 Screen unfocused, disconnecting from WebSocket room');
-        disconnectFromRoom();
+
+        // FIXED: Remove immediate disconnection to prevent rapid connection conflicts
+        // The useEffect cleanup will handle disconnection with proper delays
+        console.log('[Chat] 🔄 Screen unfocused, WebSocket cleanup will be handled by useEffect');
       };
-    }, [disconnectFromRoom])
+    }, [])
   );
 
   // Auto-mark all messages as read ONLY when screen is focused AND messages are loaded
