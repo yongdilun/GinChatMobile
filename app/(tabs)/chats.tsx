@@ -81,16 +81,34 @@ export default function ChatsScreen() {
     }
   }, []);
 
-  // Connect to sidebar WebSocket when component mounts
+  // Connect to sidebar WebSocket when component mounts (with debouncing)
   useEffect(() => {
     console.log('[ChatsScreen] Component mounted, setting up sidebar WebSocket');
     console.log('[ChatsScreen] Current connection state - isConnected:', isConnected, 'currentRoomId:', currentRoomId);
 
-    // Always connect to sidebar when chats page loads (disconnect from any chat room first)
-    console.log('[ChatsScreen] Connecting to sidebar for global updates');
-    connectToSidebar();
-
+    // Add message handler first
     addMessageHandler(handleWebSocketMessage);
+
+    // Only connect to sidebar if not already connected to it
+    if (currentRoomId !== 'global_sidebar') {
+      console.log('[ChatsScreen] Connecting to sidebar for global updates');
+      // Add a small delay to prevent rapid reconnections
+      const connectTimer = setTimeout(() => {
+        connectToSidebar();
+      }, 500);
+
+      return () => {
+        console.log('[ChatsScreen] Component unmounting, cleaning up WebSocket');
+        clearTimeout(connectTimer);
+        removeMessageHandler(handleWebSocketMessage);
+        // Don't disconnect if we're connected to a chat room
+        if (currentRoomId && currentRoomId === 'global_sidebar') {
+          disconnectFromSidebar();
+        }
+      };
+    } else {
+      console.log('[ChatsScreen] Already connected to sidebar, skipping connection');
+    }
 
     return () => {
       console.log('[ChatsScreen] Component unmounting, cleaning up WebSocket');
@@ -100,7 +118,7 @@ export default function ChatsScreen() {
         disconnectFromSidebar();
       }
     };
-  }, [connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, handleWebSocketMessage, isConnected, currentRoomId]);
+  }, [connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, handleWebSocketMessage, currentRoomId]);
 
   useEffect(() => {
     fetchChatrooms();

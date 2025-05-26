@@ -32,6 +32,8 @@ interface WebSocketServiceOptions {
     private isManualDisconnect: boolean = false;
     private connectionStabilityTimer: ReturnType<typeof setTimeout> | null = null;
     private consecutiveFailures: number = 0;
+    private lastConnectionAttempt: number = 0; // Track last connection attempt
+    private connectionThrottleMs: number = 2000; // Minimum 2 seconds between connections
 
     private defaultOptions: WebSocketServiceOptions = {
       onOpen: () => console.log("[WebSocketService] Connection opened."),
@@ -45,6 +47,14 @@ interface WebSocketServiceOptions {
         console.error("[WebSocketService] Room ID and token are required");
         return;
       }
+
+      // Throttle connections to prevent spam
+      const now = Date.now();
+      if (now - this.lastConnectionAttempt < this.connectionThrottleMs) {
+        console.log(`[WebSocketService] Connection throttled. Last attempt was ${now - this.lastConnectionAttempt}ms ago. Minimum interval: ${this.connectionThrottleMs}ms`);
+        return;
+      }
+      this.lastConnectionAttempt = now;
 
       console.log("[WebSocketService] Attempting to connect with roomId:", roomId);
 
@@ -64,7 +74,7 @@ interface WebSocketServiceOptions {
         // Shorter delay for room switching
         setTimeout(() => {
           this._initiateConnection(roomId, token, options);
-        }, 200);
+        }, 500); // Increased delay
         return;
       }
 
@@ -315,8 +325,8 @@ interface WebSocketServiceOptions {
         return;
       }
 
-      // More aggressive reconnection for mobile: 5s, 10s, 15s, 20s (max)
-      const delay = Math.min(5000 + (this.connectionAttempts * 5000), 20000);
+      // Less aggressive reconnection to prevent connection storms: 10s, 20s, 30s (max)
+      const delay = Math.min(10000 + (this.connectionAttempts * 10000), 30000);
       console.log(`[WebSocketService] Attempting to reconnect in ${delay/1000}s (attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`);
 
       this.reconnectTimeoutId = setTimeout(() => {
