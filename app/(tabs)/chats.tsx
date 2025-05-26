@@ -147,7 +147,20 @@ export default function ChatsScreen() {
       setError(null);
 
       const response = await chatAPI.getConversations();
-      setChatrooms(response.chatrooms || []);
+
+      // Preserve existing unread counts when updating chatrooms
+      setChatrooms(prevChatrooms => {
+        const newChatrooms = response.chatrooms || [];
+        return newChatrooms.map(newChatroom => {
+          // Find existing chatroom to preserve unread count
+          const existingChatroom = prevChatrooms.find(prev => prev.id === newChatroom.id);
+          return {
+            ...newChatroom,
+            // Preserve unread count if it exists
+            unread_count: existingChatroom?.unread_count || 0
+          };
+        });
+      });
 
     } catch (err) {
       console.error('Error fetching chatrooms:', err);
@@ -354,10 +367,10 @@ export default function ChatsScreen() {
                   <Text style={styles.timeText}>{lastMessageTime}</Text>
                 )}
                 {/* Unread count badge */}
-                {item.unread_count && item.unread_count > 0 && (
+                {(item.unread_count && typeof item.unread_count === 'number' && item.unread_count > 0) && (
                   <View style={styles.unreadBadge}>
                     <Text style={styles.unreadBadgeText}>
-                      {item.unread_count > 99 ? '99+' : String(item.unread_count)}
+                      {item.unread_count > 99 ? '99+' : `${item.unread_count}`}
                     </Text>
                   </View>
                 )}
@@ -382,7 +395,7 @@ export default function ChatsScreen() {
                   color={GoldTheme.gold.primary}
                 />
                 <Text style={styles.memberBadgeText}>
-                  {item.members.length}
+                  {`${item.members.length}`}
                 </Text>
               </View>
             </View>
@@ -739,7 +752,7 @@ export default function ChatsScreen() {
                               <View style={styles.memberInfo}>
                                 <Ionicons name="people" size={14} color={GoldTheme.gold.primary} />
                                 <Text style={styles.memberInfoText}>
-                                  {item.members.length} {item.members.length === 1 ? 'member' : 'members'}
+                                  {`${item.members.length}`} {item.members.length === 1 ? 'member' : 'members'}
                                 </Text>
                               </View>
                               <View style={styles.createdInfo}>
