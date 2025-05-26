@@ -1981,6 +1981,7 @@ export default function ChatDetailScreen() {
   // Prevent infinite loop state
   const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
   const [hasMarkedAllAsRead, setHasMarkedAllAsRead] = useState(false);
+  const lastMarkAllReadTime = useRef<number>(0);
 
   // Handler for three-dot menu
   const handleThreeDotMenu = useCallback(() => {
@@ -2225,7 +2226,13 @@ export default function ChatDetailScreen() {
   };
 
   const fetchMessages = async () => {
-    if (!chatroomId) return;
+    console.log('[Chat] 📥 fetchMessages called with chatroomId:', chatroomId);
+    console.log('[Chat] 📥 Current state:', { markingAllAsRead, hasMarkedAllAsRead });
+
+    if (!chatroomId) {
+      console.log('[Chat] 📥 No chatroomId, returning early');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -2243,8 +2250,19 @@ export default function ChatDetailScreen() {
 
       setMessages(sortedMessages);
 
-      // Auto-mark all messages as read when entering the chat
-      await markAllMessagesAsRead();
+      // Only auto-mark messages as read if there are actually other users in the chat
+      const hasOtherUsers = sortedMessages.some(msg =>
+        msg.sender_id !== user?.id ||
+        (msg.read_status && msg.read_status.length > 1)
+      );
+
+      if (hasOtherUsers) {
+        console.log('[Chat] Chat has other users, marking messages as read');
+        await markAllMessagesAsRead();
+      } else {
+        console.log('[Chat] Single-user chat detected, skipping mark-all-read');
+        setHasMarkedAllAsRead(true); // Prevent future calls
+      }
     } catch (error) {
       console.error('Error fetching messages:', error);
       Alert.alert('Error', 'Failed to load messages');
@@ -2255,15 +2273,44 @@ export default function ChatDetailScreen() {
 
   // Mark all messages in chatroom as read
   const markAllMessagesAsRead = async () => {
-    if (!chatroomId || !user?.token || !user?.id) return;
+    // TEMPORARY: Completely disable mark-all-read to stop spam
+    console.log('[Chat] 🚫 TEMPORARILY DISABLED mark-all-read to stop spam');
+    return;
 
-    // Prevent infinite loop - only mark as read once per chat session
-    if (markingAllAsRead || hasMarkedAllAsRead) {
-      console.log('[Chat] Skipping mark all as read - already in progress or completed:', { markingAllAsRead, hasMarkedAllAsRead });
+    if (!chatroomId || !user?.token || !user?.id) {
+      console.log('[Chat] Skipping mark all as read - missing required data:', { chatroomId: !!chatroomId, token: !!user?.token, userId: !!user?.id });
       return;
     }
 
-    console.log('[Chat] Marking all messages as read (optimistic) for chatroom:', chatroomId, 'User ID:', user.id);
+    // Prevent infinite loop - only mark as read once per chat session
+    if (markingAllAsRead || hasMarkedAllAsRead) {
+      console.log('[Chat] 🛑 BLOCKED mark all as read - already in progress or completed:', { markingAllAsRead, hasMarkedAllAsRead });
+      return;
+    }
+
+    // Additional debounce check - prevent calls within 10 seconds
+    const now = Date.now();
+    if (now - lastMarkAllReadTime.current < 10000) {
+      console.log('[Chat] 🛑 BLOCKED mark all as read - debounce protection (10s cooldown)');
+      return;
+    }
+    lastMarkAllReadTime.current = now;
+
+    // Additional check: Don't mark as read if this is a single-user chat
+    if (messages.length > 0) {
+      const allMessagesFromCurrentUser = messages.every(msg => msg.sender_id === user.id);
+      const allReadStatusHaveOnlyCurrentUser = messages.every(msg =>
+        !msg.read_status || msg.read_status.length <= 1
+      );
+
+      if (allMessagesFromCurrentUser && allReadStatusHaveOnlyCurrentUser) {
+        console.log('[Chat] 🛑 BLOCKED mark all as read - single-user chat detected, no need to mark as read');
+        setHasMarkedAllAsRead(true); // Prevent future calls
+        return;
+      }
+    }
+
+    console.log('[Chat] ✅ PROCEEDING with mark all as read for chatroom:', chatroomId, 'User ID:', user.id);
     setMarkingAllAsRead(true);
 
     // OPTIMISTIC UPDATE: Update UI immediately for instant feedback
@@ -2334,13 +2381,19 @@ export default function ChatDetailScreen() {
   };
 
   useEffect(() => {
+    console.log('[Chat] 🔄 useEffect triggered with chatroomId:', chatroomId);
+
     if (chatroomId) {
       // Reset mark-all-read state when changing chatrooms
+      console.log('[Chat] 🔄 Resetting mark-all-read state for new chatroom');
       setMarkingAllAsRead(false);
       setHasMarkedAllAsRead(false);
 
+      console.log('[Chat] 🔄 Calling fetchChatroom and fetchMessages');
       fetchChatroom();
       fetchMessages();
+    } else {
+      console.log('[Chat] 🔄 No chatroomId, skipping fetch');
     }
   }, [chatroomId]);
 
