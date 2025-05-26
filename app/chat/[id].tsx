@@ -2033,37 +2033,100 @@ export default function ChatDetailScreen() {
           );
         }
       } else if (messageType === 'message_read') {
-        // SIMPLE: Just refresh messages when read status changes
-        console.log('[Chat] 📝 Read status update received, refreshing messages');
-        fetchMessages();
+        // OPTIMISTIC: Handle read status updates from WebSocket (copy web approach)
+        const readData = newMessage.data as {
+          message_id?: string;
+          read_status?: any[];
+          user_id?: number;
+          type?: string;
+          chatroom_id?: string;
+          read_all?: boolean;
+        };
+
+        console.log('[Chat] 📝 Read status update received:', readData);
+
+        // Handle individual message read status update
+        if (readData.message_id && readData.read_status) {
+          // Only update if this is not the current user (to avoid duplicate updates)
+          if (readData.user_id !== user?.id) {
+            console.log('[Chat] 📝 Processing read status update for message:', readData.message_id);
+
+            setMessages(prevMessages =>
+              prevMessages.map(msg =>
+                msg.id === readData.message_id
+                  ? { ...msg, read_status: readData.read_status }
+                  : msg
+              )
+            );
+          } else {
+            console.log('[Chat] 📝 Skipping read status update for current user (already updated optimistically)');
+          }
+        }
       } else if (messageType === 'new_message' || messageType === 'chat_message') {
-        // SIMPLE: Just refresh messages when new message arrives
-        console.log('[Chat] 📝 New message received, refreshing messages');
+        // OPTIMISTIC: Handle new message with optimistic updates
+        console.log('[Chat] 📝 New message received');
         const messageData = newMessage.data as Message;
 
-        // Add to processed set to avoid duplicates
-        if (messageData.id) {
+        if (messageData.id && !processedMessages.current.has(messageData.id)) {
           processedMessages.current.add(messageData.id);
-        }
 
-        // Refresh messages and auto-mark as read (non-blocking)
-        fetchMessages();
+          // OPTIMISTIC: Add message to UI immediately
+          setMessages(prevMessages => {
+            const messageExists = prevMessages.some(msg => msg.id === messageData.id);
+            if (!messageExists) {
+              const updatedMessages = [messageData, ...prevMessages];
+              return updatedMessages.sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
+            }
+            return prevMessages;
+          });
 
-        // Auto-mark new messages as read if from others (non-blocking)
-        if (messageData.sender_id !== user?.id && messageData.id) {
-          console.log('[Chat] 📝 Auto-marking new message as read:', messageData.id);
-          markMessageAsRead(messageData.id);
+          // Auto-mark new messages as read if from others (optimistic)
+          if (messageData.sender_id !== user?.id && messageData.id) {
+            console.log('[Chat] 📝 Auto-marking new message as read:', messageData.id);
+            markMessageAsRead(messageData.id);
+          }
         }
       }
     }
   };
 
-  // SIMPLE: Mark a specific message as read
+  // OPTIMISTIC: Mark a specific message as read (copy web implementation exactly)
   const markMessageAsRead = async (messageId: string) => {
     if (!user?.token || !user?.id) return;
 
-    console.log('[Chat] 📝 Marking message as read:', messageId);
+    console.log('[Chat] 🚀 Optimistic mark message as read:', messageId);
 
+    // OPTIMISTIC UPDATE: Update UI immediately for instant feedback (COPY WEB EXACTLY)
+    setMessages(prevMessages => {
+      return prevMessages.map(message => {
+        if (message.id === messageId) {
+          const updatedReadStatus = [...(message.read_status || [])];
+          const userReadIndex = updatedReadStatus.findIndex(status => status.user_id === user.id);
+
+          if (userReadIndex >= 0) {
+            // Update existing read status
+            updatedReadStatus[userReadIndex] = {
+              ...updatedReadStatus[userReadIndex],
+              is_read: true,
+              read_at: new Date().toISOString()
+            };
+          } else {
+            // Add new read status
+            updatedReadStatus.push({
+              user_id: user.id,
+              username: user.name || user.email || `User ${user.id}`,
+              is_read: true,
+              read_at: new Date().toISOString()
+            });
+          }
+
+          return { ...message, read_status: updatedReadStatus };
+        }
+        return message;
+      });
+    });
+
+    // API call in background (non-blocking) - COPY WEB EXACTLY
     try {
       const response = await fetch(`${API_URL}/messages/read`, {
         method: 'POST',
@@ -2075,7 +2138,7 @@ export default function ChatDetailScreen() {
       });
 
       if (response.ok) {
-        console.log('[Chat] ✅ Successfully marked message as read');
+        console.log('[Chat] ✅ Confirmed mark message as read:', messageId);
       } else {
         console.error('[Chat] ❌ Failed to mark message as read:', response.status);
       }
@@ -2140,8 +2203,7 @@ export default function ChatDetailScreen() {
 
       setMessages(sortedMessages);
 
-      // SIMPLE: Mark all as read when entering chatroom
-      await markAllMessagesAsRead();
+      // Messages loaded, mark-all-read will be handled by useEffect
     } catch (error) {
       console.error('Error fetching messages:', error);
       Alert.alert('Error', 'Failed to load messages');
@@ -2150,15 +2212,47 @@ export default function ChatDetailScreen() {
     }
   };
 
-  // SIMPLE: Mark all messages as read - no complex logic
+  // OPTIMISTIC: Mark all messages as read (copy web implementation exactly)
   const markAllMessagesAsRead = async () => {
     if (!chatroomId || !user?.token || !user?.id || isMarkingAsRead) {
       return;
     }
 
-    console.log('[Chat] 📝 Marking all messages as read for chatroom:', chatroomId);
+    console.log('[Chat] 🚀 Optimistic mark all messages as read for chatroom:', chatroomId);
     setIsMarkingAsRead(true);
 
+    // OPTIMISTIC UPDATE: Update UI immediately for all messages from others (COPY WEB EXACTLY)
+    setMessages(prevMessages => {
+      return prevMessages.map(message => {
+        // Only update messages not sent by current user
+        if (message.sender_id !== user.id) {
+          const updatedReadStatus = [...(message.read_status || [])];
+          const userReadIndex = updatedReadStatus.findIndex(status => status.user_id === user.id);
+
+          if (userReadIndex >= 0) {
+            // Update existing read status
+            updatedReadStatus[userReadIndex] = {
+              ...updatedReadStatus[userReadIndex],
+              is_read: true,
+              read_at: new Date().toISOString()
+            };
+          } else {
+            // Add new read status
+            updatedReadStatus.push({
+              user_id: user.id,
+              username: user.name || user.email || `User ${user.id}`,
+              is_read: true,
+              read_at: new Date().toISOString()
+            });
+          }
+
+          return { ...message, read_status: updatedReadStatus };
+        }
+        return message;
+      });
+    });
+
+    // API call in background (non-blocking) - COPY WEB EXACTLY
     try {
       const response = await fetch(`${API_URL}/chatrooms/${chatroomId}/mark-all-read`, {
         method: 'POST',
@@ -2169,7 +2263,7 @@ export default function ChatDetailScreen() {
       });
 
       if (response.ok) {
-        console.log('[Chat] ✅ Successfully marked all messages as read');
+        console.log('[Chat] ✅ Confirmed mark all messages as read');
       } else {
         console.error('[Chat] ❌ Failed to mark messages as read:', response.status);
       }
@@ -2188,6 +2282,20 @@ export default function ChatDetailScreen() {
       fetchMessages();
     }
   }, [chatroomId]);
+
+  // Auto-mark all messages as read when entering chatroom (copy web implementation exactly)
+  useEffect(() => {
+    if (!chatroomId || !user) return;
+
+    console.log('[Chat] 🔄 Setting up auto-mark-all-read for chatroom:', chatroomId);
+
+    // Timer delay like web (1 second for better UX)
+    const timer = setTimeout(() => {
+      markAllMessagesAsRead();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [chatroomId, user]); // Only trigger on chatroom/user change, not messages
 
   // Web file picker function
   const pickFileForWeb = (acceptTypes: string): Promise<SelectedMediaType | null> => {
