@@ -2013,6 +2013,18 @@ export default function ChatDetailScreen() {
             [{ text: 'OK', onPress: () => router.back() }]
           );
         }
+      } else if (messageType === 'message_read') {
+        // Handle read status update
+        const readData = newMessage.data as { message_id: string; read_status: any[]; user_id: number };
+        console.log('[Chat] Message read status updated:', readData);
+
+        setMessages(prevMessages =>
+          prevMessages.map(msg =>
+            msg.id === readData.message_id
+              ? { ...msg, read_status: readData.read_status }
+              : msg
+          )
+        );
       } else if (messageType === 'new_message' || messageType === 'chat_message') {
         // Handle new message
         const messageData = newMessage.data as Message;
@@ -2020,7 +2032,7 @@ export default function ChatDetailScreen() {
         if (messageData.id && !processedMessages.current.has(messageData.id)) {
           processedMessages.current.add(messageData.id);
 
-            setMessages(prevMessages => {
+          setMessages(prevMessages => {
             const messageExists = prevMessages.some(msg => msg.id === messageData.id);
             if (!messageExists) {
               const updatedMessages = [messageData, ...prevMessages];
@@ -2028,8 +2040,36 @@ export default function ChatDetailScreen() {
             }
             return prevMessages;
           });
+
+          // Auto-mark new messages as read when received in this chat
+          if (messageData.sender_id !== user?.id) {
+            markMessageAsRead(messageData.id);
+          }
         }
       }
+    }
+  };
+
+  // Mark a specific message as read
+  const markMessageAsRead = async (messageId: string) => {
+    try {
+      console.log('[Chat] Marking message as read:', messageId);
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/messages/read`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${user?.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message_id: messageId }),
+      });
+
+      if (response.ok) {
+        console.log('[Chat] Successfully marked message as read');
+      } else {
+        console.error('[Chat] Failed to mark message as read:', response.status);
+      }
+    } catch (error) {
+      console.error('[Chat] Error marking message as read:', error);
     }
   };
 
@@ -2082,11 +2122,38 @@ export default function ChatDetailScreen() {
       sortedMessages.forEach(msg => {
         if (msg.id) processedMessages.current.add(msg.id);
       });
+
+      // Auto-mark all messages as read when entering the chat
+      await markAllMessagesAsRead();
     } catch (error) {
       console.error('Error fetching messages:', error);
       Alert.alert('Error', 'Failed to load messages');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Mark all messages in chatroom as read
+  const markAllMessagesAsRead = async () => {
+    if (!chatroomId) return;
+
+    try {
+      console.log('[Chat] Marking all messages as read for chatroom:', chatroomId);
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/chatrooms/${chatroomId}/mark-all-read`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${user?.token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        console.log('[Chat] Successfully marked all messages as read');
+      } else {
+        console.error('[Chat] Failed to mark messages as read:', response.status);
+      }
+    } catch (error) {
+      console.error('[Chat] Error marking messages as read:', error);
     }
   };
 
@@ -2684,6 +2751,27 @@ export default function ChatDetailScreen() {
     return gradients[userId % gradients.length];
   };
 
+  // Get read status for a message
+  const getReadStatus = (message: Message) => {
+    if (!message.read_status || !Array.isArray(message.read_status)) {
+      return { icon: 'checkmark', color: 'rgba(255, 255, 255, 0.6)', title: 'Sent' };
+    }
+
+    const readCount = message.read_status.filter(status => status.is_read).length;
+    const totalRecipients = message.read_status.length;
+
+    if (readCount === 0) {
+      // No one has read it - single grey tick
+      return { icon: 'checkmark', color: 'rgba(255, 255, 255, 0.6)', title: 'Sent' };
+    } else if (readCount === totalRecipients) {
+      // Everyone has read it - blue double tick
+      return { icon: 'checkmark-done', color: '#4FC3F7', title: 'Read by all' };
+    } else {
+      // Some have read it - grey double tick
+      return { icon: 'checkmark-done', color: 'rgba(255, 255, 255, 0.6)', title: `Read by ${readCount}/${totalRecipients}` };
+    }
+  };
+
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwnMessage = user?.id === item.sender_id;
     const messageDate = new Date(item.sent_at);
@@ -2749,12 +2837,18 @@ export default function ChatDetailScreen() {
               <Text style={[styles.messageTime, styles.ownMessageTime]}>
             {formattedTime} • {formattedDate}
               </Text>
-            <Ionicons
-              name="checkmark-done"
-              size={14}
-                color="rgba(255, 255, 255, 0.8)"
-              style={styles.readIcon}
-            />
+            {(() => {
+              const readStatus = getReadStatus(item);
+              return (
+                <Ionicons
+                  name={readStatus.icon as any}
+                  size={14}
+                  color={readStatus.color}
+                  style={styles.readIcon}
+                  title={readStatus.title}
+                />
+              );
+            })()}
             </View>
           </LinearGradient>
         ) : (
