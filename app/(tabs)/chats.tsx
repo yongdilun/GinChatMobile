@@ -52,12 +52,14 @@ export default function ChatsScreen() {
 
       case 'unread_count_update':
         console.log('[ChatsScreen] Unread count update received:', message.data);
-        // Update chatrooms with new unread counts
+        // Update chatrooms with new unread counts in real-time
         if (Array.isArray(message.data)) {
+          console.log('[ChatsScreen] Processing unread count updates for', message.data.length, 'chatrooms');
           setChatrooms(prevChatrooms => {
-            return prevChatrooms.map(chatroom => {
+            const updatedChatrooms = prevChatrooms.map(chatroom => {
               const updateData = message.data.find((item: any) => item.chatroom_id === chatroom.id);
               if (updateData) {
+                console.log(`[ChatsScreen] Updating unread count for ${chatroom.name}: ${updateData.unread_count}`);
                 return {
                   ...chatroom,
                   unread_count: updateData.unread_count || 0
@@ -65,7 +67,11 @@ export default function ChatsScreen() {
               }
               return chatroom;
             });
+            console.log('[ChatsScreen] Updated chatrooms with unread counts');
+            return updatedChatrooms;
           });
+        } else {
+          console.warn('[ChatsScreen] Unread count update data is not an array:', message.data);
         }
         break;
 
@@ -74,18 +80,29 @@ export default function ChatsScreen() {
     }
   }, []);
 
-  // Connect to sidebar WebSocket when component mounts
+  // Connect to sidebar WebSocket when component mounts (only if not already connected)
   useEffect(() => {
-    console.log('[ChatsScreen] Component mounted, connecting to sidebar WebSocket');
-    connectToSidebar();
+    console.log('[ChatsScreen] Component mounted, setting up sidebar WebSocket');
+
+    // Only connect if we're not already connected to a room
+    if (!isConnected) {
+      console.log('[ChatsScreen] Not connected, connecting to sidebar');
+      connectToSidebar();
+    } else {
+      console.log('[ChatsScreen] Already connected, skipping sidebar connection');
+    }
+
     addMessageHandler(handleWebSocketMessage);
 
     return () => {
       console.log('[ChatsScreen] Component unmounting, cleaning up WebSocket');
       removeMessageHandler(handleWebSocketMessage);
-      disconnectFromSidebar();
+      // Don't disconnect if we're connected to a chat room
+      if (currentRoomId === 'global_sidebar') {
+        disconnectFromSidebar();
+      }
     };
-  }, [connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, handleWebSocketMessage]);
+  }, [connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, handleWebSocketMessage, isConnected, currentRoomId]);
 
   useEffect(() => {
     fetchChatrooms();

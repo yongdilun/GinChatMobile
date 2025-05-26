@@ -156,13 +156,15 @@ interface WebSocketServiceOptions {
               return;
             }
 
-            // Handle all message types including new, edit, delete, and chatroom events
+            // Handle all message types including new, edit, delete, chatroom events, and unread counts
             if (parsedData.type === 'new_message' ||
                 parsedData.type === 'chat_message' ||
                 parsedData.type === 'message_updated' ||
                 parsedData.type === 'message_deleted' ||
                 parsedData.type === 'chatroom_deleted' ||
-                parsedData.type === 'message_read') {
+                parsedData.type === 'message_read' ||
+                parsedData.type === 'unread_count_update') {
+              console.log(`[WebSocketService] Message received: ${JSON.stringify(parsedData)}`);
               this.messageHandlers.forEach(handler => {
                 try {
                   handler(parsedData);
