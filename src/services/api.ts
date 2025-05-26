@@ -267,6 +267,13 @@ export const authAPI = {
 // Message types from backend
 export type MessageType = 'text' | 'picture' | 'audio' | 'video' | 'text_and_picture' | 'text_and_audio' | 'text_and_video';
 
+export interface ReadStatus {
+  user_id: number;
+  username: string;
+  is_read: boolean;
+  read_at: string;
+}
+
 export interface Message {
   id: string;  // MongoDB ObjectID as string
   chatroom_id: string;  // MongoDB ObjectID as string
@@ -278,6 +285,7 @@ export interface Message {
   sent_at: string;
   edited?: boolean;  // Whether message has been edited
   edited_at?: string;  // When message was last edited
+  read_status?: ReadStatus[];  // Read status for each user
 }
 
 export interface ChatroomMember {

@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { chatAPI, Message, Chatroom, MessageType, mediaAPI } from '@/services/api';
+import { chatAPI, Message, Chatroom, MessageType, mediaAPI, ReadStatus } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWebSocket, WebSocketMessage as WSMessage } from '@/contexts/WebSocketContext';
 import { GoldTheme } from '../../constants/GoldTheme';
@@ -2020,14 +2020,20 @@ export default function ChatDetailScreen() {
         // Handle read status update
         const readData = newMessage.data as { message_id: string; read_status: any[]; user_id: number };
         console.log('[Chat] Message read status updated:', readData);
+        console.log('[Chat] Current user ID:', user?.id, 'Read by user ID:', readData.user_id);
 
-        setMessages(prevMessages =>
-          prevMessages.map(msg =>
-            msg.id === readData.message_id
-              ? { ...msg, read_status: readData.read_status }
-              : msg
-          )
-        );
+        // Only update if this is not the current user (to avoid duplicate updates)
+        if (readData.user_id !== user?.id) {
+          setMessages(prevMessages =>
+            prevMessages.map(msg =>
+              msg.id === readData.message_id
+                ? { ...msg, read_status: readData.read_status }
+                : msg
+            )
+          );
+        } else {
+          console.log('[Chat] Skipping read status update for current user (already updated locally)');
+        }
       } else if (messageType === 'new_message' || messageType === 'chat_message') {
         // Handle new message
         const messageData = newMessage.data as Message;
@@ -2055,7 +2061,7 @@ export default function ChatDetailScreen() {
 
   // Mark a specific message as read
   const markMessageAsRead = async (messageId: string) => {
-    if (!user?.token) return;
+    if (!user?.token || !user?.id) return;
 
     try {
       console.log('[Chat] Marking message as read:', messageId);
@@ -2075,6 +2081,37 @@ export default function ChatDetailScreen() {
       if (response.ok) {
         const responseData = await response.json();
         console.log('[Chat] Successfully marked message as read:', responseData);
+
+        // Update local state immediately to show read status
+        setMessages(prevMessages =>
+          prevMessages.map(msg => {
+            if (msg.id === messageId) {
+              // Update the read status for this user
+              const updatedReadStatus = msg.read_status ? [...msg.read_status] : [];
+              const userReadIndex = updatedReadStatus.findIndex(status => status.user_id === user.id);
+
+              if (userReadIndex >= 0) {
+                // Update existing read status
+                updatedReadStatus[userReadIndex] = {
+                  ...updatedReadStatus[userReadIndex],
+                  is_read: true,
+                  read_at: new Date().toISOString()
+                };
+              } else {
+                // Add new read status
+                updatedReadStatus.push({
+                  user_id: user.id,
+                  username: user.name || user.email,
+                  is_read: true,
+                  read_at: new Date().toISOString()
+                });
+              }
+
+              return { ...msg, read_status: updatedReadStatus };
+            }
+            return msg;
+          })
+        );
       } else {
         const errorData = await response.text();
         console.error('[Chat] Failed to mark message as read:', response.status, errorData);
@@ -2146,7 +2183,7 @@ export default function ChatDetailScreen() {
 
   // Mark all messages in chatroom as read
   const markAllMessagesAsRead = async () => {
-    if (!chatroomId || !user?.token) return;
+    if (!chatroomId || !user?.token || !user?.id) return;
 
     try {
       console.log('[Chat] Marking all messages as read for chatroom:', chatroomId);
@@ -2166,6 +2203,37 @@ export default function ChatDetailScreen() {
       if (response.ok) {
         const responseData = await response.json();
         console.log('[Chat] Successfully marked all messages as read:', responseData);
+
+        // Update local state immediately to show all messages as read by current user
+        setMessages(prevMessages =>
+          prevMessages.map(msg => {
+            // Only update messages that are not sent by the current user
+            if (msg.sender_id !== user.id) {
+              const updatedReadStatus = msg.read_status ? [...msg.read_status] : [];
+              const userReadIndex = updatedReadStatus.findIndex(status => status.user_id === user.id);
+
+              if (userReadIndex >= 0) {
+                // Update existing read status
+                updatedReadStatus[userReadIndex] = {
+                  ...updatedReadStatus[userReadIndex],
+                  is_read: true,
+                  read_at: new Date().toISOString()
+                };
+              } else {
+                // Add new read status
+                updatedReadStatus.push({
+                  user_id: user.id,
+                  username: user.name || user.email,
+                  is_read: true,
+                  read_at: new Date().toISOString()
+                });
+              }
+
+              return { ...msg, read_status: updatedReadStatus };
+            }
+            return msg;
+          })
+        );
       } else {
         const errorData = await response.text();
         console.error('[Chat] Failed to mark messages as read:', response.status, errorData);
@@ -2771,18 +2839,27 @@ export default function ChatDetailScreen() {
 
   // Get read status for a message
   const getReadStatus = (message: Message) => {
+    // Debug logging for read status
+    if (message.id && message.read_status) {
+      console.log(`[Chat] Read status for message ${message.id}:`, message.read_status);
+    }
+
     if (!message.read_status || !Array.isArray(message.read_status)) {
+      console.log(`[Chat] No read status for message ${message.id}`);
       return { icon: 'checkmark', color: 'rgba(255, 255, 255, 0.6)', title: 'Sent' };
     }
 
     const readCount = message.read_status.filter(status => status.is_read).length;
     const totalRecipients = message.read_status.length;
 
+    console.log(`[Chat] Message ${message.id} read status: ${readCount}/${totalRecipients} read`);
+
     if (readCount === 0) {
       // No one has read it - single grey tick
       return { icon: 'checkmark', color: 'rgba(255, 255, 255, 0.6)', title: 'Sent' };
     } else if (readCount === totalRecipients) {
       // Everyone has read it - blue double tick
+      console.log(`[Chat] Message ${message.id} read by all - showing blue tick`);
       return { icon: 'checkmark-done', color: '#4FC3F7', title: 'Read by all' };
     } else {
       // Some have read it - grey double tick
