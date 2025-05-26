@@ -17,7 +17,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedView } from '@/components/ThemedView';
@@ -1980,6 +1980,7 @@ export default function ChatDetailScreen() {
 
   // Simple read status state
   const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
+  const [isScreenFocused, setIsScreenFocused] = useState(false);
 
   // Handler for three-dot menu
   const handleThreeDotMenu = useCallback(() => {
@@ -2283,11 +2284,32 @@ export default function ChatDetailScreen() {
     }
   }, [chatroomId]);
 
-  // Auto-mark all messages as read when entering chatroom (copy web implementation exactly)
-  useEffect(() => {
-    if (!chatroomId || !user) return;
+  // Track screen focus to only mark messages as read when user is actually viewing the chat
+  useFocusEffect(
+    useCallback(() => {
+      console.log('[Chat] 🔄 Screen focused, setting isScreenFocused to true');
+      setIsScreenFocused(true);
 
-    console.log('[Chat] 🔄 Setting up auto-mark-all-read for chatroom:', chatroomId);
+      return () => {
+        console.log('[Chat] 🔄 Screen unfocused, setting isScreenFocused to false');
+        setIsScreenFocused(false);
+      };
+    }, [])
+  );
+
+  // Auto-mark all messages as read ONLY when screen is focused AND messages are loaded
+  useEffect(() => {
+    if (!chatroomId || !user || !isScreenFocused || messages.length === 0) {
+      console.log('[Chat] 🔄 Skipping auto-mark-all-read:', {
+        chatroomId: !!chatroomId,
+        user: !!user,
+        isScreenFocused,
+        messagesLoaded: messages.length > 0
+      });
+      return;
+    }
+
+    console.log('[Chat] 🔄 Setting up auto-mark-all-read for chatroom:', chatroomId, '(screen focused + messages loaded)');
 
     // Timer delay like web (1 second for better UX)
     const timer = setTimeout(() => {
@@ -2295,7 +2317,7 @@ export default function ChatDetailScreen() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [chatroomId, user]); // Only trigger on chatroom/user change, not messages
+  }, [chatroomId, user, isScreenFocused, messages.length]); // Only trigger when screen is focused AND messages are loaded
 
   // Web file picker function
   const pickFileForWeb = (acceptTypes: string): Promise<SelectedMediaType | null> => {
