@@ -329,10 +329,12 @@ export default function ChatsScreen() {
 
   const renderChatroomItem = ({ item }: { item: Chatroom }) => {
     const gradientColors = getGoldGradient(item.name);
-    const lastMessage = item.last_message
-      ? item.last_message.content
+
+    // Ensure all values are properly converted to strings
+    const lastMessage = item.last_message?.content
+      ? String(item.last_message.content)
       : 'Start the conversation...';
-    const lastMessageTime = item.last_message
+    const lastMessageTime = item.last_message?.timestamp
       ? formatTime(item.last_message.timestamp)
       : '';
 
@@ -372,13 +374,13 @@ export default function ChatsScreen() {
                   <Text style={styles.timeText}>{String(lastMessageTime)}</Text>
                 )}
                 {/* Unread count badge */}
-                {(item.unread_count && typeof item.unread_count === 'number' && item.unread_count > 0) && (
+                {(item.unread_count && typeof item.unread_count === 'number' && item.unread_count > 0) ? (
                   <View style={styles.unreadBadge}>
                     <Text style={styles.unreadBadgeText}>
                       {item.unread_count > 99 ? '99+' : `${item.unread_count}`}
                     </Text>
                   </View>
-                )}
+                ) : null}
                 <Ionicons
                   name="chevron-forward"
                   size={16}
@@ -400,7 +402,7 @@ export default function ChatsScreen() {
                   color={GoldTheme.gold.primary}
                 />
                 <Text style={styles.memberBadgeText}>
-                  {`${item.members.length}`}
+                  {String(item.members?.length || 0)}
                 </Text>
               </View>
             </View>
@@ -747,23 +749,23 @@ export default function ChatsScreen() {
                             end={{ x: 1, y: 1 }}
                           >
                             <Text style={styles.availableChatroomAvatarText}>
-                              {item.name.charAt(0).toUpperCase()}
+                              {String(item.name || 'U').charAt(0).toUpperCase()}
                             </Text>
                           </LinearGradient>
 
                           <View style={styles.availableChatroomInfo}>
-                            <Text style={styles.availableChatroomName}>{item.name}</Text>
+                            <Text style={styles.availableChatroomName}>{String(item.name || 'Unknown Room')}</Text>
                             <View style={styles.availableChatroomDetails}>
                               <View style={styles.memberInfo}>
                                 <Ionicons name="people" size={14} color={GoldTheme.gold.primary} />
                                 <Text style={styles.memberInfoText}>
-                                  {`${item.members.length}`} {item.members.length === 1 ? 'member' : 'members'}
+                                  {String(item.members?.length || 0)} {(item.members?.length || 0) === 1 ? 'member' : 'members'}
                                 </Text>
                               </View>
                               <View style={styles.createdInfo}>
                                 <Ionicons name="calendar" size={14} color={GoldTheme.text.muted} />
                                 <Text style={styles.createdInfoText}>
-                                  Created {new Date(item.created_at).toLocaleDateString()}
+                                  Created {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Unknown'}
                                 </Text>
                               </View>
                             </View>
