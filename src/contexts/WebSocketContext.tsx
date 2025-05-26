@@ -1,6 +1,6 @@
 // GinChatMobile/src/contexts/WebSocketContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import robustWebSocketService from '@/services/RobustWebSocketService'; // Import the new robust service
+import webSocketService from '@/services/WebSocketService'; // Import the original service
 import { useAuth } from './AuthContext'; // To get the token
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -25,7 +25,7 @@ interface WebSocketContextType {
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
 export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isConnected, setIsConnected] = useState(robustWebSocketService.isConnected());
+  const [isConnected, setIsConnected] = useState(webSocketService.isConnected());
   const { token } = useAuth();
   const currentRoomIdRef = useRef<string | null>(null);
 
@@ -69,7 +69,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
       currentRoomIdRef.current = roomId;
       await AsyncStorage.setItem('lastConnectedRoom', roomId);
 
-      robustWebSocketService.connect(roomId, token, {
+      webSocketService.connect(roomId, token, {
         onOpen: handleOpen,
         onClose: handleClose,
         onError: handleError,
@@ -83,34 +83,37 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     console.log("[WebSocketContext] Disconnecting from room");
     currentRoomIdRef.current = null;
     AsyncStorage.removeItem('lastConnectedRoom').catch(console.error);
-    robustWebSocketService.disconnect();
+    webSocketService.disconnect();
     setIsConnected(false);
   }, []);
 
   const addMessageHandler = useCallback((handler: (message: WebSocketMessage) => void) => {
-    robustWebSocketService.addMessageHandler(handler);
+    webSocketService.addMessageHandler(handler);
   }, []);
 
   const removeMessageHandler = useCallback((handler: (message: WebSocketMessage) => void) => {
-    robustWebSocketService.removeMessageHandler(handler);
+    webSocketService.removeMessageHandler(handler);
   }, []);
 
   const sendMessage = useCallback((data: object): boolean => {
-    return robustWebSocketService.sendMessage(data);
+    return webSocketService.sendMessage(data);
   }, []);
 
   const getConnectionState = useCallback((): string => {
-    return robustWebSocketService.getConnectionState();
+    return webSocketService.isConnected() ? 'CONNECTED' : 'DISCONNECTED';
   }, []);
 
   const getStats = useCallback((): object => {
-    return robustWebSocketService.getStats();
+    return {
+      isConnected: webSocketService.isConnected(),
+      connectionState: webSocketService.isConnected() ? 'CONNECTED' : 'DISCONNECTED'
+    };
   }, []);
 
   // Effect to update connection status
   useEffect(() => {
     const checkConnectionStatus = () => {
-      const currentStatus = robustWebSocketService.isConnected();
+      const currentStatus = webSocketService.isConnected();
       if (isConnected !== currentStatus) {
         console.log(`[WebSocketContext] Connection status changed: ${currentStatus}`);
         setIsConnected(currentStatus);
@@ -127,7 +130,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Effect to handle reconnection on token change
   useEffect(() => {
     const reconnectToLastRoom = async () => {
-      if (token && !robustWebSocketService.isConnected()) {
+      if (token && !webSocketService.isConnected()) {
         try {
           // Try to get the last connected room
           const lastRoom = await AsyncStorage.getItem('lastConnectedRoom');
@@ -152,7 +155,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     return () => {
       if (currentRoomIdRef.current) {
         console.log("[WebSocketContext] Cleaning up WebSocket connection");
-        robustWebSocketService.disconnect();
+        webSocketService.disconnect();
       }
     };
   }, [token, connectToRoom]);

@@ -1970,12 +1970,8 @@ export default function ChatDetailScreen() {
 
   const {
     connectToRoom,
-    disconnectFromRoom,
     addMessageHandler,
     removeMessageHandler,
-    isConnected,
-    getConnectionState,
-    getStats,
   } = useWebSocket();
 
   const chatroomId = typeof chatroomIdFromParams === 'string' ? chatroomIdFromParams : null;
@@ -2047,9 +2043,7 @@ export default function ChatDetailScreen() {
 
       // Connect to room with a small delay to ensure handler is registered
       const connectTimer = setTimeout(() => {
-        console.log('[Chat] Current connection state before connect:', getConnectionState());
         connectToRoom(chatroomId);
-        console.log('[Chat] Connection initiated, new state:', getConnectionState());
       }, 100);
 
       return () => {
