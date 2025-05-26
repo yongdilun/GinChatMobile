@@ -29,18 +29,10 @@ interface WebSocketServiceOptions {
     private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private isReconnecting: boolean = false;
     private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
-    private lastSuccessfulConnection: number = 0;
-    private connectionBackoffMultiplier: number = 1.5; // Gentler backoff
     private isManualDisconnect: boolean = false;
     private connectionStabilityTimer: ReturnType<typeof setTimeout> | null = null;
     private consecutiveFailures: number = 0;
-    private lastConnectionAttempt: number = 0;
-    private minReconnectDelay: number = 2000; // Minimum 2 seconds between attempts
-    private maxReconnectDelay: number = 30000; // Maximum 30 seconds
     private connectionHealthCheck: ReturnType<typeof setInterval> | null = null;
-    private maxConsecutiveFailures: number = 5; // Circuit breaker threshold
-    private circuitBreakerTimeout: number = 300000; // 5 minutes before trying again
-    private circuitBreakerTimer: ReturnType<typeof setTimeout> | null = null;
 
     private defaultOptions: WebSocketServiceOptions = {
       onOpen: () => console.log("[WebSocketService] Connection opened."),
@@ -119,7 +111,6 @@ interface WebSocketServiceOptions {
           this.connectionAttempts = 0;
           this.consecutiveFailures = 0; // Reset failure count on successful connection
           this.isReconnecting = false;
-          this.lastSuccessfulConnection = Date.now();
 
           // Clear any existing stability timer
           if (this.connectionStabilityTimer) {
@@ -226,21 +217,8 @@ interface WebSocketServiceOptions {
                                  this.connectionAttempts < this.maxConnectionAttempts;
 
           if (shouldReconnect) {
-            // Calculate delay based on consecutive failures and connection duration
-            const connectionDuration = Date.now() - this.lastSuccessfulConnection;
-            const isQuickFailure = connectionDuration < 5000; // Failed within 5 seconds
-            const timeSinceLastAttempt = Date.now() - this.lastConnectionAttempt;
-
-            // Ensure minimum delay between attempts
-            const minDelay = Math.max(this.minReconnectDelay, this.minReconnectDelay - timeSinceLastAttempt);
-
-            if (isQuickFailure || this.consecutiveFailures > 2) {
-              console.log("[WebSocketService] Multiple failures or quick failure detected, using exponential backoff");
-              this.handleReconnect(true);
-            } else {
-              console.log("[WebSocketService] Initiating reconnection after close");
-              this.handleReconnect(false);
-            }
+            console.log("[WebSocketService] Initiating reconnection after close");
+            this.handleReconnect();
           } else {
             console.log("[WebSocketService] Not reconnecting:", {
               isManualDisconnect: this.isManualDisconnect,
@@ -293,28 +271,21 @@ interface WebSocketServiceOptions {
         clearInterval(this.heartbeatInterval);
       }
 
-      // Adjust heartbeat frequency based on connection stability
-      const heartbeatInterval = this.consecutiveFailures > 2 ? 60000 : 45000; // Slower heartbeat if unstable
-
+      // Send heartbeat every 45 seconds
       this.heartbeatInterval = setInterval(() => {
         if (this.ws && this.ws.readyState === WebSocket.OPEN && !this.isManualDisconnect) {
           const heartbeatMsg: WebSocketMessage = {
             type: 'heartbeat',
-            data: {
-              timestamp: new Date().toISOString(),
-              failures: this.consecutiveFailures,
-              attempts: this.connectionAttempts
-            }
+            data: { timestamp: new Date().toISOString() }
           };
           try {
             this.ws.send(JSON.stringify(heartbeatMsg));
-            console.log(`[WebSocketService] Heartbeat sent (failures: ${this.consecutiveFailures})`);
+            console.log("[WebSocketService] Heartbeat sent");
           } catch (error) {
             console.error("[WebSocketService] Error sending heartbeat:", error);
-            this.consecutiveFailures++;
           }
         }
-      }, heartbeatInterval);
+      }, 45000);
     }
 
     private stopHeartbeat(): void {
@@ -340,7 +311,7 @@ interface WebSocketServiceOptions {
           }
         } else if (this.ws && this.ws.readyState === WebSocket.CLOSED && !this.isManualDisconnect && !this.isReconnecting) {
           console.log("[WebSocketService] Health check detected closed connection, attempting reconnection");
-          this.handleReconnect(false);
+          this.handleReconnect();
         }
       }, 60000);
     }
@@ -352,32 +323,13 @@ interface WebSocketServiceOptions {
       }
     }
 
-    private handleReconnect(isQuickFailure: boolean = false): void {
+    private handleReconnect(): void {
       if (this.isReconnecting || !this.currentRoomId || !this.currentToken) {
-        return;
-      }
-
-      // Circuit breaker: if too many consecutive failures, wait longer before trying again
-      if (this.consecutiveFailures >= this.maxConsecutiveFailures) {
-        if (!this.circuitBreakerTimer) {
-          console.warn(`[WebSocketService] Circuit breaker activated after ${this.consecutiveFailures} consecutive failures. Waiting ${this.circuitBreakerTimeout/1000}s before retrying.`);
-          this.circuitBreakerTimer = setTimeout(() => {
-            console.log("[WebSocketService] Circuit breaker timeout expired, resetting failure count");
-            this.consecutiveFailures = 0;
-            this.connectionAttempts = 0;
-            this.circuitBreakerTimer = null;
-            // Try to reconnect after circuit breaker timeout
-            if (this.currentRoomId && this.currentToken && !this.isManualDisconnect) {
-              this.handleReconnect(false);
-            }
-          }, this.circuitBreakerTimeout);
-        }
         return;
       }
 
       this.isReconnecting = true;
       this.connectionAttempts++;
-      this.lastConnectionAttempt = Date.now();
 
       if (this.connectionAttempts >= this.maxConnectionAttempts) {
         console.error("[WebSocketService] Max reconnection attempts reached");
@@ -385,16 +337,9 @@ interface WebSocketServiceOptions {
         return;
       }
 
-      // Calculate delay with exponential backoff based on consecutive failures
-      let baseDelay = this.minReconnectDelay * Math.pow(this.connectionBackoffMultiplier, this.consecutiveFailures);
-
-      // If it's a quick failure or multiple consecutive failures, use longer delay
-      if (isQuickFailure || this.consecutiveFailures > 2) {
-        baseDelay = Math.max(baseDelay, 5000 * this.consecutiveFailures); // Increase delay based on failures
-      }
-
-      const delay = Math.min(baseDelay, this.maxReconnectDelay);
-      console.log(`[WebSocketService] Attempting to reconnect in ${delay/1000}s (attempt ${this.connectionAttempts}/${this.maxConnectionAttempts}, failures: ${this.consecutiveFailures})`);
+      // Simple exponential backoff: 2s, 4s, 8s, 16s, 30s (max)
+      const delay = Math.min(2000 * Math.pow(2, this.connectionAttempts - 1), 30000);
+      console.log(`[WebSocketService] Attempting to reconnect in ${delay/1000}s (attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`);
 
       this.reconnectTimeoutId = setTimeout(() => {
         if (this.currentRoomId && this.currentToken && !this.isManualDisconnect) {
@@ -424,10 +369,7 @@ interface WebSocketServiceOptions {
         this.connectionStabilityTimer = null;
       }
 
-      if (this.circuitBreakerTimer) {
-        clearTimeout(this.circuitBreakerTimer);
-        this.circuitBreakerTimer = null;
-      }
+
 
       if (this.ws) {
         console.log("[WebSocketService] Closing WebSocket connection...");
@@ -444,8 +386,6 @@ interface WebSocketServiceOptions {
       this.currentToken = null;
       this.connectionAttempts = 0;
       this.consecutiveFailures = 0;
-      this.lastSuccessfulConnection = 0;
-      this.lastConnectionAttempt = 0;
     }
 
     public sendMessage(data: object): boolean {

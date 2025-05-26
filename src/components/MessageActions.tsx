@@ -61,8 +61,9 @@ export function MessageActions({
     console.log('[MessageActions] Setting showEditModal to true');
 
     setShowEditModal(true);
-    console.log('[MessageActions] Calling onClose');
-    onClose();
+    console.log('[MessageActions] NOT calling onClose to keep modal open');
+    // Don't call onClose() immediately - let the edit modal show first
+    // onClose();
   };
 
   const handleDelete = () => {
@@ -128,6 +129,7 @@ export function MessageActions({
 
       await onEdit(message.id, editText.trim(), editMediaUrl.trim() || undefined, messageType);
       setShowEditModal(false);
+      onClose(); // Close the parent message actions modal
     } catch (error) {
       Alert.alert('Error', 'Failed to edit message. Please try again.');
     } finally {
@@ -210,6 +212,7 @@ export function MessageActions({
                   onPress={() => {
                     console.log('[MessageActions] Edit modal close button pressed');
                     setShowEditModal(false);
+                    onClose(); // Close the parent message actions modal
                   }}
                   style={styles.closeButton}
                 >
@@ -259,6 +262,7 @@ export function MessageActions({
                   onPress={() => {
                     console.log('[MessageActions] Cancel button pressed');
                     setShowEditModal(false);
+                    onClose(); // Close the parent message actions modal
                   }}
                   variant="outline"
                   style={styles.editButton}

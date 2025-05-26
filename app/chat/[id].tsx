@@ -545,7 +545,16 @@ function ChatDetailHeader({ chatroom, messages }: { chatroom: Chatroom | null; m
 
               <TouchableOpacity
                 style={styles.headerButton}
-                onPress={() => Alert.alert('Test', 'Three-dot menu pressed!')}
+                onPress={() => {
+                  console.log('[Chat] Three-dot menu pressed');
+                  try {
+                    setShowChatroomActions(true);
+                    console.log('[Chat] Successfully set showChatroomActions to true');
+                  } catch (error) {
+                    console.error('[Chat] Error setting showChatroomActions:', error);
+                    Alert.alert('Error', 'Failed to open chatroom actions');
+                  }
+                }}
                 activeOpacity={0.8}
               >
                 <Ionicons
