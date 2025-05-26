@@ -93,6 +93,13 @@ export default function ChatsScreen() {
         }
         break;
 
+      case 'message_read':
+        console.log('[ChatsScreen] Message read status update received:', message.data);
+        // Handle read status updates - these don't need to update the sidebar directly
+        // The unread_count_update event will handle the unread count changes
+        // Just log for debugging purposes
+        break;
+
       default:
         console.log('[ChatsScreen] Unhandled message type:', message.type);
     }
