@@ -36,6 +36,9 @@ import * as MediaLibrary from 'expo-media-library';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 
+// Use the same API URL as the rest of the app
+const API_URL = 'https://ginchat-14ry.onrender.com/api';
+
 function AudioPlayer({ uri, isCompact = false }: { uri: string; isCompact?: boolean }) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -2052,21 +2055,29 @@ export default function ChatDetailScreen() {
 
   // Mark a specific message as read
   const markMessageAsRead = async (messageId: string) => {
+    if (!user?.token) return;
+
     try {
       console.log('[Chat] Marking message as read:', messageId);
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/messages/read`, {
+      console.log('[Chat] Using API URL:', API_URL);
+
+      const response = await fetch(`${API_URL}/messages/read`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user?.token}`,
+          'Authorization': `Bearer ${user.token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ message_id: messageId }),
       });
 
+      console.log('[Chat] Mark message read response status:', response.status);
+
       if (response.ok) {
-        console.log('[Chat] Successfully marked message as read');
+        const responseData = await response.json();
+        console.log('[Chat] Successfully marked message as read:', responseData);
       } else {
-        console.error('[Chat] Failed to mark message as read:', response.status);
+        const errorData = await response.text();
+        console.error('[Chat] Failed to mark message as read:', response.status, errorData);
       }
     } catch (error) {
       console.error('[Chat] Error marking message as read:', error);
@@ -2135,22 +2146,29 @@ export default function ChatDetailScreen() {
 
   // Mark all messages in chatroom as read
   const markAllMessagesAsRead = async () => {
-    if (!chatroomId) return;
+    if (!chatroomId || !user?.token) return;
 
     try {
       console.log('[Chat] Marking all messages as read for chatroom:', chatroomId);
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/chatrooms/${chatroomId}/mark-all-read`, {
+      console.log('[Chat] Using API URL:', API_URL);
+      console.log('[Chat] Using token:', user.token ? 'Token available' : 'No token');
+
+      const response = await fetch(`${API_URL}/chatrooms/${chatroomId}/mark-all-read`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user?.token}`,
+          'Authorization': `Bearer ${user.token}`,
           'Content-Type': 'application/json',
         },
       });
 
+      console.log('[Chat] Mark all read response status:', response.status);
+
       if (response.ok) {
-        console.log('[Chat] Successfully marked all messages as read');
+        const responseData = await response.json();
+        console.log('[Chat] Successfully marked all messages as read:', responseData);
       } else {
-        console.error('[Chat] Failed to mark messages as read:', response.status);
+        const errorData = await response.text();
+        console.error('[Chat] Failed to mark messages as read:', response.status, errorData);
       }
     } catch (error) {
       console.error('[Chat] Error marking messages as read:', error);
