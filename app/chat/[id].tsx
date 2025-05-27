@@ -331,7 +331,7 @@ export default function ChatDetail() {
   };
 
   // Get read status for messages
-  const getReadStatus = (message: Message) => {
+  const getReadStatus = useCallback((message: Message) => {
     // Only show read status for own messages
     if (message.sender_id !== user?.id) {
       return { icon: '', color: 'transparent', title: '' };
@@ -347,23 +347,37 @@ export default function ChatDetail() {
     // Count how many users have actually read the message (is_read: true)
     const readCount = readStatuses.filter(status => status.is_read === true).length;
 
+    // Create a unique key for this read status state to help with re-rendering
+    const readStatusKey = readStatuses.map(s => `${s.user_id}:${s.is_read}`).sort().join('|');
+
     console.log('[Chat] 📊 Read status check:', {
       messageId: message.id,
       totalMembers,
       readStatusesLength: readStatuses.length,
       readCount,
+      readStatusKey,
       readStatuses: readStatuses.map(s => ({ user_id: s.user_id, username: s.username, is_read: s.is_read }))
     });
 
     // All members (except sender) have read the message
     if (readCount >= totalMembers - 1) { // -1 because sender doesn't count
-      console.log('[Chat] 💙 Blue tick - all read:', message.id);
-      return { icon: 'checkmark-done', color: '#007AFF', title: 'Read by all' }; // iOS blue color
+      console.log('[Chat] 💙 Blue tick - all read:', message.id, 'Key:', readStatusKey);
+      return {
+        icon: 'checkmark-done',
+        color: '#007AFF',
+        title: 'Read by all',
+        key: `blue-${readStatusKey}` // Force re-render when status changes
+      };
     } else {
-      console.log('[Chat] ⚪ Grey tick - not all read:', message.id, `(${readCount}/${totalMembers - 1})`);
-      return { icon: 'checkmark-done', color: '#888', title: `Read by ${readCount} of ${totalMembers - 1}` };
+      console.log('[Chat] ⚪ Grey tick - not all read:', message.id, `(${readCount}/${totalMembers - 1})`, 'Key:', readStatusKey);
+      return {
+        icon: 'checkmark-done',
+        color: '#888',
+        title: `Read by ${readCount} of ${totalMembers - 1}`,
+        key: `grey-${readStatusKey}` // Force re-render when status changes
+      };
     }
-  };
+  }, [user?.id, chatroom?.members]);
 
   // Handle message long press
   const handleMessageLongPress = (message: Message) => {
@@ -383,7 +397,7 @@ export default function ChatDetail() {
   };
 
   // Render message item
-  const renderMessage = ({ item }: { item: Message }) => {
+  const renderMessage = useCallback(({ item }: { item: Message }) => {
     const isOwnMessage = item.sender_id === user?.id;
     const userGradient = isOwnMessage ? null : getUserGradient(item.sender_name);
 
@@ -397,7 +411,7 @@ export default function ChatDetail() {
         getReadStatus={getReadStatus}
       />
     );
-  };
+  }, [user?.id, getUserGradient, handleImageClick, handleMessageLongPress, getReadStatus]);
 
   // Loading state
   if (loading) {
@@ -445,12 +459,17 @@ export default function ChatDetail() {
           ref={flatListRef}
           data={messages}
           renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => {
+            // Include read status in key to force re-render when status changes
+            const readStatusKey = item.read_status?.map(s => `${s.user_id}:${s.is_read}`).sort().join('|') || 'no-status';
+            return `${item.id}-${readStatusKey}`;
+          }}
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
           inverted
           onEndReachedThreshold={0.1}
+          extraData={messages} // Force re-render when messages change
         />
       </LinearGradient>
 

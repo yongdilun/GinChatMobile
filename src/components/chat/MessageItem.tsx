@@ -19,7 +19,7 @@ interface MessageItemProps {
   userGradient: readonly [string, string] | null;
   onImageClick: (imageUrl: string) => void;
   onLongPress: (message: Message) => void;
-  getReadStatus: (message: Message) => { icon: string; color: string; title: string };
+  getReadStatus: (message: Message) => { icon: string; color: string; title: string; key?: string };
 }
 
 export function MessageItem({
@@ -98,6 +98,7 @@ export function MessageItem({
 
               return (
                 <Ionicons
+                  key={readStatus.key || `read-${item.id}`} // Use key to force re-render
                   name={readStatus.icon as any}
                   size={14}
                   color={readStatus.color}

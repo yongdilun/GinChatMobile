@@ -20,10 +20,10 @@ interface UseWebSocketHandlerProps {
   markMessageAsRead: (messageId: string) => Promise<void>;
 }
 
-export function useWebSocketHandler({ 
-  chatroomId, 
-  setMessages, 
-  markMessageAsRead 
+export function useWebSocketHandler({
+  chatroomId,
+  setMessages,
+  markMessageAsRead
 }: UseWebSocketHandlerProps) {
   const { user } = useAuth();
   const { connectToRoom, connectToSidebar, addMessageHandler, removeMessageHandler } = useSimpleWebSocket();
@@ -83,14 +83,67 @@ export function useWebSocketHandler({
           // Handle individual message read status update
           if (readData.message_id && readData.read_status) {
             console.log('[Chat] 📝 Processing read status update for message:', readData.message_id, '(reader:', readData.user_id, ')');
+            console.log('[Chat] 📝 New read status data:', readData.read_status);
 
-            setMessages(prevMessages =>
-              prevMessages.map(msg =>
-                msg.id === readData.message_id
-                  ? { ...msg, read_status: readData.read_status }
-                  : msg
-              )
-            );
+            setMessages(prevMessages => {
+              const updatedMessages = prevMessages.map(msg => {
+                if (msg.id === readData.message_id) {
+                  const updatedMsg = { ...msg, read_status: readData.read_status };
+                  console.log('[Chat] 📝 Updated message read status:', {
+                    messageId: msg.id,
+                    oldReadStatus: msg.read_status,
+                    newReadStatus: readData.read_status
+                  });
+                  return updatedMsg;
+                }
+                return msg;
+              });
+
+              console.log('[Chat] 📝 Messages state updated with new read status');
+              return updatedMessages;
+            });
+          }
+
+          // Handle bulk read status update (when user marks all as read)
+          if (readData.type === 'bulk_read' && readData.user_id) {
+            console.log('[Chat] 📝 Processing bulk read status update for user:', readData.user_id);
+
+            setMessages(prevMessages => {
+              const updatedMessages = prevMessages.map(msg => {
+                // Only update messages that this user hasn't read yet
+                const currentReadStatus = msg.read_status || [];
+                const userAlreadyRead = currentReadStatus.some(status => status.user_id === readData.user_id && status.is_read);
+
+                if (!userAlreadyRead) {
+                  const newReadStatus = [...currentReadStatus];
+                  const existingIndex = newReadStatus.findIndex(status => status.user_id === readData.user_id);
+
+                  if (existingIndex >= 0) {
+                    // Update existing status
+                    newReadStatus[existingIndex] = {
+                      ...newReadStatus[existingIndex],
+                      is_read: true,
+                      read_at: new Date().toISOString()
+                    };
+                  } else {
+                    // Add new read status
+                    newReadStatus.push({
+                      user_id: readData.user_id,
+                      username: 'User', // Will be updated by backend
+                      is_read: true,
+                      read_at: new Date().toISOString()
+                    });
+                  }
+
+                  console.log('[Chat] 📝 Bulk updated message:', msg.id, 'for user:', readData.user_id);
+                  return { ...msg, read_status: newReadStatus };
+                }
+                return msg;
+              });
+
+              console.log('[Chat] 📝 Bulk read status update completed');
+              return updatedMessages;
+            });
           }
         } else {
           console.log('[Chat] 📝 Ignoring read status update for different chatroom:', newMessage.chatroom_id, 'vs current:', chatroomId);
