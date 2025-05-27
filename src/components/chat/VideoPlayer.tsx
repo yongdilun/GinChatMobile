@@ -317,15 +317,25 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
 
         {/* Video Controls Overlay */}
         {videoReady && showControls && !isBuffering && (
-          <View style={videoPlayerStyles.videoOverlay} pointerEvents="box-none">
+          <View style={videoPlayerStyles.videoOverlay}>
             <LinearGradient
               colors={['rgba(0, 0, 0, 0.3)', 'transparent', 'rgba(0, 0, 0, 0.7)']}
               style={videoPlayerStyles.videoOverlayGradient}
               pointerEvents="none"
             />
 
+            {/* Background touch area for showing/hiding controls */}
+            <TouchableOpacity
+              style={videoPlayerStyles.videoBackgroundTouch}
+              onPress={() => {
+                console.log('Background touch pressed');
+                handleVideoPress();
+              }}
+              activeOpacity={1}
+            />
+
             {/* Top Controls */}
-            <View style={videoPlayerStyles.videoTopControls} pointerEvents="box-none">
+            <View style={videoPlayerStyles.videoTopControls}>
               <View style={videoPlayerStyles.videoTopRightControls}>
                 <TouchableOpacity
                   style={videoPlayerStyles.videoActionButton}
@@ -357,7 +367,7 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
             </View>
 
             {/* Center controls area - play button */}
-            <View style={videoPlayerStyles.videoCenterControls} pointerEvents="box-none">
+            <View style={videoPlayerStyles.videoCenterControls}>
               <TouchableOpacity
                 style={videoPlayerStyles.videoPlayButton}
                 onPress={() => {
@@ -375,7 +385,7 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
             </View>
 
             {/* Bottom Controls */}
-            <View style={videoPlayerStyles.videoBottomControls} pointerEvents="box-none">
+            <View style={videoPlayerStyles.videoBottomControls}>
               <Text style={videoPlayerStyles.videoTimeText}>
                 {formatTime(position)} / {formatTime(duration)}
               </Text>
@@ -405,16 +415,6 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
                 </TouchableOpacity>
               </View>
             </View>
-
-            {/* Background touch area for showing/hiding controls - MOVED TO BOTTOM */}
-            <TouchableOpacity
-              style={[videoPlayerStyles.videoBackgroundTouch, { zIndex: -1 }]}
-              onPress={() => {
-                console.log('Background touch pressed');
-                handleVideoPress();
-              }}
-              activeOpacity={1}
-            />
           </View>
         )}
       </View>

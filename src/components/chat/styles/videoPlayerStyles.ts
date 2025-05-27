@@ -46,7 +46,7 @@ export const videoPlayerStyles = StyleSheet.create({
     right: 0,
     bottom: 0,
     justifyContent: 'space-between',
-    zIndex: 1,
+    zIndex: 2,
   },
   videoOverlayGradient: {
     position: 'absolute',
@@ -116,6 +116,7 @@ export const videoPlayerStyles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'transparent',
+    zIndex: 1,
   },
   videoErrorContainer: {
     flex: 1,
