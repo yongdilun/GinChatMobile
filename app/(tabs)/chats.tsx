@@ -547,7 +547,7 @@ export default function ChatsScreen() {
                   colors={['rgba(255, 215, 0, 0.1)', 'transparent']}
                   style={styles.titleGlow}
                 />
-                <Text style={styles.headerTitle}>GinChat Elite</Text>
+                <Text style={styles.headerTitle}>GinChat</Text>
                 <Text style={styles.headerSubtitle}>
                   Welcome back, {user?.name || 'User'}
                 </Text>
@@ -667,7 +667,7 @@ export default function ChatsScreen() {
             </LinearGradient>
 
             <View style={styles.footerInfo}>
-              <Text style={styles.footerTitle}>GinChat Elite</Text>
+              <Text style={styles.footerTitle}>GinChat</Text>
               <Text style={styles.footerSubtitle}>Premium Messaging Experience</Text>
               <View style={styles.footerBadge}>
                 <Ionicons name="shield-checkmark" size={12} color={GoldTheme.gold.primary} />

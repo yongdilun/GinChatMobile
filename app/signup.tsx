@@ -66,7 +66,7 @@ export default function SignupScreen() {
         // Show success message without navigation callback
         Alert.alert(
           'Welcome to GinChat!',
-          'Your premium account has been created successfully. You are now logged in.',
+          'Your account has been created successfully. You are now logged in.',
           [{ text: 'Get Started' }]
         );
       } catch (loginError: any) {
@@ -155,8 +155,8 @@ export default function SignupScreen() {
               ) : null}
 
               <GoldInput
-                label="Full Name"
-                placeholder="Enter your full name"
+                label="Username"
+                placeholder="Enter your username"
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"

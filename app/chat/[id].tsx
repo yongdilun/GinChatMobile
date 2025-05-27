@@ -295,10 +295,10 @@ export default function ChatDetail() {
 
     // Hide indicator if:
     // 1. No unread messages exist
-    // 2. Less than 5 unread messages
+    // 2. Less than 6 unread messages
     // 3. All messages have been loaded (!hasMore) - meaning we've reached the beginning
     // 4. User has manually dismissed the indicator
-    if (!hasUnreadMessages || unreadCount < 5 || !hasMore || unreadIndicatorDismissedRef.current) {
+    if (!hasUnreadMessages || unreadCount < 6 || !hasMore || unreadIndicatorDismissedRef.current) {
       console.log('[Chat] Hiding unread indicator:', {
         hasUnreadMessages,
         unreadCount,

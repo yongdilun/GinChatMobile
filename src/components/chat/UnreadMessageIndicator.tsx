@@ -74,8 +74,8 @@ export function UnreadMessageIndicator({
           return !readStatus;
         }).length;
 
-        // Only show indicator if there are 5 or more unread messages
-        if (unreadCount < 5) return null;
+        // Only show indicator if there are 6 or more unread messages
+        if (unreadCount < 6) return null;
 
         return {
           message,

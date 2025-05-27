@@ -83,7 +83,7 @@ export default function LoginScreen() {
               
               <ThemedText style={styles.welcomeTitle}>Welcome Back</ThemedText>
               <ThemedText style={styles.welcomeSubtitle}>
-                Sign in to your premium account
+                Sign in to your account
               </ThemedText>
             </View>
 
