@@ -11,7 +11,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { chatAPI, Message, Chatroom, MessageType, mediaAPI, ReadStatus } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { GoldTheme } from '../../constants/GoldTheme';
@@ -244,8 +244,8 @@ export default function ChatDetail() {
 
       setMessages(sortedMessages);
 
-      // Note: Messages will be marked as read by the useFocusEffect
-      // when user actively views the chat for 2+ seconds
+      // Note: Messages will be marked as read by the room entry useEffect
+      // after a 1.5 second delay to ensure messages are loaded
 
     } catch (error) {
       console.error('[Chat] Error loading chatroom data:', error);
@@ -262,34 +262,22 @@ export default function ChatDetail() {
     loadChatroomData();
   }, [chatroomId, token]);
 
-  // Focus effect to mark messages as read when actively viewing chat
-  useFocusEffect(
-    useCallback(() => {
-      if (!chatroomId || !token) return;
+  // Auto-mark messages as read when entering the chat room (not based on screen focus)
+  useEffect(() => {
+    if (!chatroomId || !token || !user?.id || hasMarkedAsReadRef.current) return;
 
-      let timeoutId: ReturnType<typeof setTimeout>;
-      let isStillFocused = true;
+    // Mark messages as read after a short delay when entering the room
+    // This ensures messages are loaded first and only happens once per room entry
+    const timeoutId = setTimeout(() => {
+      hasMarkedAsReadRef.current = true;
+      console.log('[Chat] 📝 User entered chat room, marking messages as read');
+      markAllMessagesAsRead();
+    }, 1500); // 1.5 second delay to ensure messages are loaded
 
-      // Only mark as read if user stays on screen for at least 2 seconds
-      // AND we haven't already marked messages as read for this session
-      timeoutId = setTimeout(() => {
-        if (isStillFocused && !hasMarkedAsReadRef.current) {
-          hasMarkedAsReadRef.current = true;
-          console.log('[Chat] 📝 User actively viewing chat, marking messages as read');
-          markAllMessagesAsRead();
-        }
-      }, 2000); // Increased delay to 2 seconds
-
-      // Cleanup function - called when screen loses focus
-      return () => {
-        isStillFocused = false;
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          console.log('[Chat] 📝 Screen lost focus, cancelled auto-mark as read');
-        }
-      };
-    }, [chatroomId, token]) // Removed markAllMessagesAsRead from dependencies
-  );
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [chatroomId, user?.id, token, markAllMessagesAsRead]); // Triggers when entering a new room
 
   // Send message function
   const sendMessage = async () => {
