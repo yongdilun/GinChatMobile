@@ -203,10 +203,11 @@ export default function ChatDetail() {
       // Load chatroom details
       const chatroomResponse = await chatAPI.getConversationById(chatroomId);
       setChatroom(chatroomResponse.chatroom);
+      console.log('[Chat] 📋 Loaded chatroom:', chatroomResponse.chatroom);
 
       // Load messages
       const messagesResponse = await chatAPI.getMessages(chatroomId);
-      console.log('[Chat] Messages response:', messagesResponse);
+      console.log('[Chat] 📨 Messages response:', messagesResponse);
 
       // Handle the case where messages might be null or in a different format
       const messagesList = messagesResponse?.messages || messagesResponse || [];
@@ -215,6 +216,13 @@ export default function ChatDetail() {
             new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
           )
         : [];
+
+      console.log('[Chat] 📨 Processed messages:', sortedMessages.map(m => ({
+        id: m.id,
+        sender_id: m.sender_id,
+        text_content: m.text_content?.substring(0, 50),
+        read_status: m.read_status
+      })));
 
       setMessages(sortedMessages);
 
@@ -324,17 +332,36 @@ export default function ChatDetail() {
 
   // Get read status for messages
   const getReadStatus = (message: Message) => {
+    // Only show read status for own messages
+    if (message.sender_id !== user?.id) {
+      return { icon: '', color: 'transparent', title: '' };
+    }
+
     if (!message.read_status || message.read_status.length === 0) {
       return { icon: 'checkmark', color: '#888', title: 'Sent' };
     }
 
     const totalMembers = chatroom?.members?.length || 0;
-    const readCount = message.read_status.length;
+    const readStatuses = message.read_status;
 
+    // Count how many users have actually read the message (is_read: true)
+    const readCount = readStatuses.filter(status => status.is_read === true).length;
+
+    console.log('[Chat] 📊 Read status check:', {
+      messageId: message.id,
+      totalMembers,
+      readStatusesLength: readStatuses.length,
+      readCount,
+      readStatuses: readStatuses.map(s => ({ user_id: s.user_id, username: s.username, is_read: s.is_read }))
+    });
+
+    // All members (except sender) have read the message
     if (readCount >= totalMembers - 1) { // -1 because sender doesn't count
-      return { icon: 'checkmark-done', color: GoldTheme.gold.primary, title: 'Read by all' };
+      console.log('[Chat] 💙 Blue tick - all read:', message.id);
+      return { icon: 'checkmark-done', color: '#007AFF', title: 'Read by all' }; // iOS blue color
     } else {
-      return { icon: 'checkmark', color: '#888', title: `Read by ${readCount}` };
+      console.log('[Chat] ⚪ Grey tick - not all read:', message.id, `(${readCount}/${totalMembers - 1})`);
+      return { icon: 'checkmark-done', color: '#888', title: `Read by ${readCount} of ${totalMembers - 1}` };
     }
   };
 

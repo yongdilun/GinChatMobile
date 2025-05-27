@@ -93,13 +93,15 @@ export function MessageItem({
             </Text>
             {(() => {
               const readStatus = getReadStatus(item);
+              // Only render icon if it exists (for own messages)
+              if (!readStatus.icon) return null;
+
               return (
                 <Ionicons
                   name={readStatus.icon as any}
                   size={14}
                   color={readStatus.color}
                   style={messageItemStyles.readIcon}
-                  title={readStatus.title}
                 />
               );
             })()}
