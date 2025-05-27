@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { GoldTheme } from '../../../constants/GoldTheme';
 import { AudioPlayer } from './AudioPlayer';
 import { VideoPlayer } from './VideoPlayer';
 import { AudioRecorder } from './AudioRecorder';
+import { EmojiPicker } from './EmojiPicker';
 import { SelectedMediaType } from '../../hooks/useMediaPicker';
 import { AudioRecording } from '../../hooks/useAudioRecorder';
 import { messageInputStyles } from './styles/messageInputStyles';
@@ -55,6 +56,11 @@ export function MessageInput({
   onRecordingComplete,
   onRecordingCancel,
 }: MessageInputProps) {
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const handleEmojiSelect = (emoji: string) => {
+    setMessageText(messageText + emoji);
+  };
   return (
     <>
       <KeyboardAvoidingView
@@ -124,6 +130,19 @@ export function MessageInput({
             )}
           </TouchableOpacity>
 
+          {/* Emoji Button */}
+          <TouchableOpacity
+            onPress={() => setShowEmojiPicker(true)}
+            style={[
+              messageInputStyles.emojiButton,
+              (sending || isUploading) && messageInputStyles.disabledButton
+            ]}
+            disabled={sending || isUploading}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="happy-outline" size={24} color={GoldTheme.gold.primary} />
+          </TouchableOpacity>
+
           {/* Microphone Button */}
           <TouchableOpacity
             onPress={onStartRecording}
@@ -185,6 +204,13 @@ export function MessageInput({
         isVisible={isRecorderVisible}
         onRecordingComplete={onRecordingComplete}
         onCancel={onRecordingCancel}
+      />
+
+      {/* Emoji Picker Modal */}
+      <EmojiPicker
+        visible={showEmojiPicker}
+        onClose={() => setShowEmojiPicker(false)}
+        onEmojiSelect={handleEmojiSelect}
       />
     </>
   );

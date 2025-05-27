@@ -65,6 +65,14 @@ export const messageInputStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 0, 0.2)',
   },
+  emojiButton: {
+    padding: 8,
+    borderRadius: 20,
+    marginRight: 12,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.2)',
+  },
   micButton: {
     padding: 8,
     borderRadius: 20,
