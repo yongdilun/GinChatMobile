@@ -13,7 +13,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { GoldTheme } from '../../constants/GoldTheme';
 import { GoldButton } from './GoldButton';
-import { Message } from '../services/api';
+import { Message, chatAPI } from '../services/api';
+import { MediaSelector } from './chat/MediaSelector';
+import { SelectedMediaType } from '../hooks/useMediaPicker';
 
 interface MessageActionsProps {
   message: Message;
@@ -36,10 +38,11 @@ export function MessageActions({
 }: MessageActionsProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editText, setEditText] = useState(message.text_content || '');
-  const [editMediaUrl, setEditMediaUrl] = useState(message.media_url || '');
+  const [selectedMedia, setSelectedMedia] = useState<SelectedMediaType | null>(null);
   const [editMessageType, setEditMessageType] = useState(message.message_type || 'text');
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Only show actions for user's own messages
   const canModify = message.sender_id === currentUserId;
@@ -66,6 +69,33 @@ export function MessageActions({
     console.log('[MessageActions] NOT calling onClose to keep modal open');
     // Don't call onClose() immediately - let the edit modal show first
     // onClose();
+  };
+
+  const handleMediaSelected = async (media: SelectedMediaType) => {
+    try {
+      setIsUploading(true);
+      console.log('[MessageActions] Uploading media for edit:', media.name);
+
+      // Upload media to get URL
+      const uploadResponse = await chatAPI.uploadMedia(media.uri, media.backendType);
+
+      // Set the selected media with the uploaded URL
+      setSelectedMedia({
+        ...media,
+        uri: uploadResponse.media_url, // Use the uploaded URL
+      });
+
+      console.log('[MessageActions] ✅ Media uploaded successfully:', uploadResponse.media_url);
+    } catch (error) {
+      console.error('[MessageActions] ❌ Failed to upload media:', error);
+      Alert.alert('Error', 'Failed to upload media. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveMedia = () => {
+    setSelectedMedia(null);
   };
 
   const handleDelete = () => {
@@ -96,7 +126,8 @@ export function MessageActions({
 
   const handleSaveEdit = async () => {
     // Check if there's any content (text or media)
-    if (!editText.trim() && !editMediaUrl.trim()) {
+    const mediaUrl = selectedMedia?.uri || '';
+    if (!editText.trim() && !mediaUrl) {
       Alert.alert('Error', 'Message cannot be empty');
       return;
     }
@@ -106,31 +137,26 @@ export function MessageActions({
 
       // Determine message type based on content
       let messageType = editMessageType;
-      if (editText.trim() && editMediaUrl.trim()) {
+      if (editText.trim() && mediaUrl) {
         // Both text and media
-        if (editMediaUrl.includes('video')) {
+        if (selectedMedia?.backendType === 'video') {
           messageType = 'text_and_video';
-        } else if (editMediaUrl.includes('audio')) {
+        } else if (selectedMedia?.backendType === 'audio') {
           messageType = 'text_and_audio';
         } else {
           messageType = 'text_and_picture';
         }
-      } else if (editMediaUrl.trim()) {
+      } else if (mediaUrl) {
         // Only media
-        if (editMediaUrl.includes('video')) {
-          messageType = 'video';
-        } else if (editMediaUrl.includes('audio')) {
-          messageType = 'audio';
-        } else {
-          messageType = 'picture';
-        }
+        messageType = selectedMedia?.backendType || 'picture';
       } else {
         // Only text
         messageType = 'text';
       }
 
-      await onEdit(message.id, editText.trim(), editMediaUrl.trim() || undefined, messageType);
+      await onEdit(message.id, editText.trim(), mediaUrl || undefined, messageType);
       setShowEditModal(false);
+      setSelectedMedia(null); // Reset media selection
       onClose(); // Close the parent message actions modal
     } catch (error) {
       Alert.alert('Error', 'Failed to edit message. Please try again.');
@@ -256,26 +282,48 @@ export function MessageActions({
                 />
               </View>
 
-              {/* Media URL Input */}
+              {/* Media Picker Section */}
               <View style={styles.editInputContainer}>
-                <Text style={styles.inputLabel}>Media URL (optional)</Text>
-                <TextInput
-                  style={styles.editInput}
-                  value={editMediaUrl}
-                  onChangeText={setEditMediaUrl}
-                  placeholder="Enter media URL..."
-                  placeholderTextColor={GoldTheme.text.muted}
-                  multiline={false}
-                />
-                {editMediaUrl ? (
-                  <TouchableOpacity
-                    style={styles.removeMediaButton}
-                    onPress={() => setEditMediaUrl('')}
-                  >
-                    <Ionicons name="close-circle" size={20} color={GoldTheme.status.error} />
-                    <Text style={styles.removeMediaText}>Remove Media</Text>
-                  </TouchableOpacity>
-                ) : null}
+                <Text style={styles.inputLabel}>Media (optional)</Text>
+
+                {/* Media Picker */}
+                <View style={styles.mediaPickerContainer}>
+                  <MediaSelector
+                    onMediaSelected={handleMediaSelected}
+                    disabled={isUploading || isEditing}
+                  />
+                  {isUploading && (
+                    <View style={styles.uploadingContainer}>
+                      <ActivityIndicator size="small" color={GoldTheme.gold.primary} />
+                      <Text style={styles.uploadingText}>Uploading...</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Selected Media Preview */}
+                {selectedMedia && (
+                  <View style={styles.mediaPreviewContainer}>
+                    <View style={styles.mediaPreview}>
+                      <Ionicons
+                        name={
+                          selectedMedia.backendType === 'video' ? 'videocam' :
+                          selectedMedia.backendType === 'audio' ? 'musical-notes' : 'image'
+                        }
+                        size={20}
+                        color={GoldTheme.gold.primary}
+                      />
+                      <Text style={styles.mediaFileName} numberOfLines={1}>
+                        {selectedMedia.name}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.removeMediaIconButton}
+                        onPress={handleRemoveMedia}
+                      >
+                        <Ionicons name="close-circle" size={20} color={GoldTheme.status.error} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
               </View>
 
               <View style={styles.editActions}>
@@ -294,7 +342,7 @@ export function MessageActions({
                   title={isEditing ? 'Saving...' : 'Save'}
                   onPress={handleSaveEdit}
                   style={styles.editButton}
-                  disabled={isEditing || (!editText.trim() && !editMediaUrl.trim())}
+                  disabled={isEditing || isUploading || (!editText.trim() && !selectedMedia)}
                 />
               </View>
             </LinearGradient>
@@ -406,15 +454,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
-  removeMediaButton: {
+  // Media picker styles
+  mediaPickerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    paddingVertical: 4,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  removeMediaText: {
-    color: GoldTheme.status.error,
+  uploadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  uploadingText: {
+    color: GoldTheme.text.secondary,
     fontSize: 14,
-    marginLeft: 4,
+    marginLeft: 8,
+  },
+  mediaPreviewContainer: {
+    marginTop: 8,
+  },
+  mediaPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+  },
+  mediaFileName: {
+    flex: 1,
+    color: GoldTheme.text.primary,
+    fontSize: 14,
+    marginLeft: 8,
+    marginRight: 8,
+  },
+  removeMediaIconButton: {
+    padding: 4,
   },
 });

@@ -55,6 +55,42 @@ GinChat Mobile is a premium messaging application that provides a luxurious chat
 - **Modern Architecture**: Clean TypeScript code with context-based state management
 - **Professional Features**: Message read status, typing indicators, media galleries
 - **Production Ready**: Deployed and connected to live backend infrastructure
+- **Navigation Protection**: Spam-prevention with debounced navigation and visual feedback
+- **Consistent UI**: Stable gradient colors and enhanced message previews with usernames
+
+---
+
+## 🆕 Recent Updates & Improvements
+
+### Navigation Spam Prevention (Latest)
+- **Debounced Navigation**: Prevents multiple chat pages from opening when users rapidly tap chat items
+- **Visual Feedback**: Chat items show disabled state during navigation with 60% opacity
+- **2-Second Cooldown**: Prevents rapid navigation attempts with proper timeout management
+- **Error Recovery**: Immediate reset on navigation errors for smooth user experience
+- **Console Logging**: Detailed navigation logs for debugging and monitoring
+
+### Enhanced UI Consistency
+- **Consistent Gradients**: Fixed group icon gradients to be stable across app sessions using improved hash function
+- **8 Gold Variants**: Expanded gradient palette with classic gold, orange gold, light gold, bright gold, dark gold, yellow gold, medium gold, and amber gold
+- **Stable Color Mapping**: Same chat names always get the same gradient colors for better user recognition
+
+### Improved Message Display
+- **Username in Previews**: Latest message previews now show "Username: message" format for better context
+- **Enhanced Formatting**: "You: message" for own messages, "Username: message" for others
+- **Better Context**: Users can understand conversation flow without opening chats
+- **Media Type Support**: Proper display of different message types in chat list previews
+
+### Header Media Optimization
+- **Video Controls**: Removed play button from header videos, keeping only expand and download for space efficiency
+- **Audio Download**: Restored download functionality for audio players in header mode
+- **Cleaner Layout**: Better space utilization in media gallery headers
+- **Touch Targets**: Optimized button sizes for better mobile interaction
+
+### WebSocket Architecture
+- **SimpleWebSocket Implementation**: Migrated from complex WebSocketService to streamlined SimpleWebSocket
+- **Better Connection Management**: Improved room switching with graceful disconnection
+- **Cross-Platform Sync**: Seamless communication between web and mobile clients
+- **Auto-Reconnection**: Robust reconnection logic for network interruptions
 
 ---
 
