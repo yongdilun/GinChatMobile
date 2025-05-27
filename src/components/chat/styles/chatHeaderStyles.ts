@@ -127,7 +127,7 @@ export const chatHeaderStyles = StyleSheet.create({
   },
   tabContent: {
     minHeight: 120,
-    maxHeight: 200,
+    maxHeight: 160, // Reduced to fit compact videos better
   },
   membersContainer: {
     flex: 1,

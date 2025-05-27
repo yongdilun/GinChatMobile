@@ -180,4 +180,13 @@ export const videoPlayerStyles = StyleSheet.create({
     backgroundColor: GoldTheme.gold.primary,
     borderRadius: 2,
   },
+  videoPlayerCompact: {
+    width: 160,
+    height: 120,
+  },
+  videoPlayButtonCompact: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
 });

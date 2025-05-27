@@ -237,7 +237,7 @@ export function ChatDetailHeader({
                   {videos.length > 0 ? (
                     videos.map((msg, index) => (
                       <View key={index} style={chatHeaderStyles.mediaVideoWrap}>
-                        <VideoPlayer uri={msg.media_url!} />
+                        <VideoPlayer uri={msg.media_url!} isCompact={true} />
                       </View>
                     ))
                   ) : (

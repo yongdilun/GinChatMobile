@@ -18,9 +18,10 @@ import { videoPlayerStyles } from './styles/videoPlayerStyles';
 
 interface VideoPlayerProps {
   uri: string;
+  isCompact?: boolean;
 }
 
-export function VideoPlayer({ uri }: VideoPlayerProps) {
+export function VideoPlayer({ uri, isCompact = false }: VideoPlayerProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -86,6 +87,13 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
         if (controlsTimeoutRef.current) {
           clearTimeout(controlsTimeoutRef.current);
         }
+        // Reset video to beginning when it finishes
+        setTimeout(() => {
+          const currentVideoRef = isFullscreen ? fullscreenVideoRef.current : videoRef.current;
+          if (currentVideoRef) {
+            currentVideoRef.setPositionAsync(0);
+          }
+        }, 100);
       }
     } else {
       if (status.error) {
@@ -107,6 +115,18 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
       if (isPlaying) {
         await currentVideoRef.pauseAsync();
       } else {
+        // Check if video has ended (position is at or near the end)
+        if (playbackStatus?.isLoaded) {
+          const duration = playbackStatus.durationMillis || 0;
+          const position = playbackStatus.positionMillis || 0;
+          const isAtEnd = duration > 0 && position >= duration - 1000; // Within 1 second of end
+
+          if (isAtEnd) {
+            // Reset to beginning if video has ended
+            await currentVideoRef.setPositionAsync(0);
+          }
+        }
+
         await currentVideoRef.playAsync();
       }
       resetControlsTimeout();
@@ -239,6 +259,7 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
   const duration = (playbackStatus?.isLoaded ? playbackStatus.durationMillis : 0) || 0;
   const position = (playbackStatus?.isLoaded ? playbackStatus.positionMillis : 0) || 0;
   const progress = duration > 0 ? Math.min(position / duration, 1) : 0;
+  const hasEnded = playbackStatus?.isLoaded && playbackStatus.didJustFinish;
 
   // Error state
   if (videoError) {
@@ -268,7 +289,10 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
 
   return (
     <>
-      <View style={videoPlayerStyles.videoPlayerContainer}>
+      <View style={[
+        videoPlayerStyles.videoPlayerContainer,
+        isCompact && videoPlayerStyles.videoPlayerCompact
+      ]}>
         <Video
           ref={videoRef}
           source={{ uri }}
@@ -369,7 +393,10 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
             {/* Center controls area - play button */}
             <View style={videoPlayerStyles.videoCenterControls}>
               <TouchableOpacity
-                style={videoPlayerStyles.videoPlayButton}
+                style={[
+                  videoPlayerStyles.videoPlayButton,
+                  isCompact && videoPlayerStyles.videoPlayButtonCompact
+                ]}
                 onPress={() => {
                   console.log('Play/pause button pressed');
                   handlePlayPause();
@@ -377,8 +404,8 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
                 activeOpacity={0.8}
               >
                 <Ionicons
-                  name={isPlaying ? "pause" : "play"}
-                  size={40}
+                  name={hasEnded ? "refresh" : isPlaying ? "pause" : "play"}
+                  size={isCompact ? 24 : 40}
                   color="#fff"
                 />
               </TouchableOpacity>
