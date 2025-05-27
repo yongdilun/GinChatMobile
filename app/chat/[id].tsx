@@ -579,21 +579,55 @@ export default function ChatDetail() {
           onEdit={async (messageId: string, newText: string, newMediaUrl?: string, newMessageType?: string) => {
             // Handle message edit
             try {
-              // TODO: Implement message edit API call
-              console.log('Edit message:', messageId, newText, newMediaUrl, newMessageType);
+              console.log('[Chat] Editing message:', messageId, newText, newMediaUrl, newMessageType);
+
+              const updateData = {
+                text_content: newText || undefined,
+                media_url: newMediaUrl || undefined,
+                message_type: newMessageType || 'text',
+              };
+
+              await chatAPI.updateMessage(chatroomId!, messageId, updateData);
+
+              // Update local state optimistically
+              setMessages(prevMessages =>
+                prevMessages.map(msg =>
+                  msg.id === messageId
+                    ? {
+                        ...msg,
+                        text_content: newText,
+                        media_url: newMediaUrl,
+                        message_type: newMessageType as any,
+                        edited: true,
+                      }
+                    : msg
+                )
+              );
+
+              console.log('[Chat] ✅ Message edited successfully');
               setSelectedMessage(null);
             } catch (error) {
-              console.error('Failed to edit message:', error);
+              console.error('[Chat] ❌ Failed to edit message:', error);
+              Alert.alert('Error', 'Failed to edit message. Please try again.');
             }
           }}
           onDelete={async (messageId: string) => {
             // Handle message delete
             try {
-              // TODO: Implement message delete API call
-              console.log('Delete message:', messageId);
+              console.log('[Chat] Deleting message:', messageId);
+
+              await chatAPI.deleteMessage(chatroomId!, messageId);
+
+              // Remove from local state optimistically
+              setMessages(prevMessages =>
+                prevMessages.filter(msg => msg.id !== messageId)
+              );
+
+              console.log('[Chat] ✅ Message deleted successfully');
               setSelectedMessage(null);
             } catch (error) {
-              console.error('Failed to delete message:', error);
+              console.error('[Chat] ❌ Failed to delete message:', error);
+              Alert.alert('Error', 'Failed to delete message. Please try again.');
             }
           }}
           currentUserId={user.id}
