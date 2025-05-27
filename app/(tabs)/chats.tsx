@@ -7,14 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { chatAPI, Chatroom } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWebSocket, WebSocketMessage } from '@/contexts/WebSocketContext';
+import { useSimpleWebSocket, WebSocketMessage } from '@/contexts/SimpleWebSocketContext';
 import { GoldButton } from '../../src/components/GoldButton';
 import { GoldInput } from '../../src/components/GoldInput';
 import { GoldTheme } from '../../constants/GoldTheme';
 
 export default function ChatsScreen() {
   const { user, logout } = useAuth();
-  const { connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, isConnected, currentRoomId } = useWebSocket();
+  const { connectToSidebar, disconnectFromRoom, addMessageHandler, removeMessageHandler, isConnected, currentRoomId } = useSimpleWebSocket();
   const [chatrooms, setChatrooms] = useState<Chatroom[]>([]);
   const [availableChatrooms, setAvailableChatrooms] = useState<Chatroom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,30 +110,16 @@ export default function ChatsScreen() {
     console.log('[ChatsScreen] Component mounted, setting up sidebar WebSocket');
     console.log('[ChatsScreen] Current connection state - isConnected:', isConnected, 'currentRoomId:', currentRoomId);
 
-    // Add message handler first
-    addMessageHandler(handleWebSocketMessage);
-
-    // Only connect to sidebar if not already connected to it
+    // SIMPLIFIED: Connect to sidebar immediately
     if (currentRoomId !== 'global_sidebar') {
       console.log('[ChatsScreen] 🔌 Connecting to sidebar for global updates');
-      // FIXED: Longer delay to coordinate with chat screen disconnections
-      const connectTimer = setTimeout(() => {
-        console.log('[ChatsScreen] 🔌 Connecting to sidebar after delay');
-        connectToSidebar();
-      }, 1200); // Increased from 500ms to 1200ms to coordinate with chat screen
+      addMessageHandler(handleWebSocketMessage);
+      connectToSidebar();
 
       return () => {
         console.log('[ChatsScreen] 🔌 Component unmounting, cleaning up WebSocket');
-        clearTimeout(connectTimer);
         removeMessageHandler(handleWebSocketMessage);
-
-        // FIXED: Add delay before disconnecting to prevent connection conflicts
-        setTimeout(() => {
-          if (currentRoomId && currentRoomId === 'global_sidebar') {
-            console.log('[ChatsScreen] 🔌 Disconnecting from sidebar after delay');
-            disconnectFromSidebar();
-          }
-        }, 200);
+        disconnectFromRoom();
       };
     } else {
       console.log('[ChatsScreen] Already connected to sidebar, skipping connection');

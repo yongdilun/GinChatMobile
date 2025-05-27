@@ -1,8 +1,7 @@
 // GinChatMobile/src/contexts/WebSocketContext.tsx
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import webSocketService from '@/services/WebSocketService'; // Import the original service
-import { useAuth } from './AuthContext'; // To get the token
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import simpleWebSocketService from '@/services/SimpleWebSocketService'; // Use simplified service
+import { useAuth } from './AuthContext';
 
 // Define the shape of the WebSocket message for context consumers
 export interface WebSocketMessage {

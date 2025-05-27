@@ -3,14 +3,14 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { WebSocketProvider } from '@/contexts/WebSocketContext';
+import { SimpleWebSocketProvider } from '@/contexts/SimpleWebSocketContext';
 import { ProtectedRoute } from '../src/components/ProtectedRoute';
 
 export default function RootLayout() {
   return (
     <View style={{ flex: 1 }}>
       <AuthProvider>
-        <WebSocketProvider>
+        <SimpleWebSocketProvider>
           <ProtectedRoute>
             <Stack
               screenOptions={{
@@ -53,7 +53,7 @@ export default function RootLayout() {
           </Stack>
           </ProtectedRoute>
           <StatusBar style="light" />
-        </WebSocketProvider>
+        </SimpleWebSocketProvider>
       </AuthProvider>
     </View>
   );

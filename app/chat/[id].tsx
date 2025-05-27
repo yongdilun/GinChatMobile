@@ -24,7 +24,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { chatAPI, Message, Chatroom, MessageType, mediaAPI, ReadStatus } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWebSocket, WebSocketMessage as WSMessage } from '@/contexts/WebSocketContext';
+import { useSimpleWebSocket, WebSocketMessage as WSMessage } from '@/contexts/SimpleWebSocketContext';
 import { GoldTheme } from '../../constants/GoldTheme';
 import { GoldButton } from '../../src/components/GoldButton';
 import { MessageActions } from '../../src/components/MessageActions';
@@ -1993,7 +1993,7 @@ export default function ChatDetailScreen() {
     disconnectFromRoom,
     addMessageHandler,
     removeMessageHandler,
-  } = useWebSocket();
+  } = useSimpleWebSocket();
 
   const chatroomId = typeof chatroomIdFromParams === 'string' ? chatroomIdFromParams : null;
 
@@ -2155,33 +2155,22 @@ export default function ChatDetailScreen() {
 
 
 
-  // Connect to WebSocket with improved connection management
+  // SIMPLIFIED: Connect to WebSocket - no delays, no complex logic
   useEffect(() => {
     if (chatroomId && user?.id) {
-      console.log('[Chat] 🔌 Setting up WebSocket connection for room:', chatroomId);
+      console.log('[Chat] 🔌 Connecting to WebSocket room:', chatroomId);
 
-      // Add message handler first
+      // Add message handler and connect immediately
       addMessageHandler(handleIncomingMessage);
-
-      // FIXED: Longer delay to prevent rapid connection conflicts
-      const connectTimer = setTimeout(() => {
-        console.log('[Chat] 🔌 Connecting to WebSocket room after delay:', chatroomId);
-        connectToRoom(chatroomId);
-      }, 800); // Increased from 100ms to 800ms to prevent rapid connection conflicts
+      connectToRoom(chatroomId);
 
       return () => {
         console.log('[Chat] 🔌 Cleaning up WebSocket connection for room:', chatroomId);
-        clearTimeout(connectTimer);
         removeMessageHandler(handleIncomingMessage);
-
-        // FIXED: Add delay before disconnecting to prevent connection conflicts
-        setTimeout(() => {
-          console.log('[Chat] 🔌 Disconnecting from WebSocket room after delay:', chatroomId);
-          disconnectFromRoom();
-        }, 200); // Small delay to ensure cleanup happens after navigation
+        disconnectFromRoom();
       };
     }
-  }, [chatroomId, user?.id, handleIncomingMessage, addMessageHandler, removeMessageHandler, connectToRoom, disconnectFromRoom]); // FIXED: Include all dependencies
+  }, [chatroomId, user?.id]); // SIMPLIFIED: Minimal dependencies
 
   const fetchChatroom = async () => {
     if (!chatroomId) return;
@@ -2296,19 +2285,15 @@ export default function ChatDetailScreen() {
     }
   }, [chatroomId]);
 
-  // Track screen focus to only mark messages as read when user is actually viewing the chat
+  // SIMPLIFIED: Track screen focus for read status
   useFocusEffect(
     useCallback(() => {
-      console.log('[Chat] 🔄 Screen focused, setting isScreenFocused to true');
+      console.log('[Chat] 🔄 Screen focused');
       setIsScreenFocused(true);
 
       return () => {
-        console.log('[Chat] 🔄 Screen unfocused, setting isScreenFocused to false');
+        console.log('[Chat] 🔄 Screen unfocused');
         setIsScreenFocused(false);
-
-        // FIXED: Remove immediate disconnection to prevent rapid connection conflicts
-        // The useEffect cleanup will handle disconnection with proper delays
-        console.log('[Chat] 🔄 Screen unfocused, WebSocket cleanup will be handled by useEffect');
       };
     }, [])
   );
