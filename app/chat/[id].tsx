@@ -212,7 +212,7 @@ export default function ChatDetail() {
   };
 
   // Load chatroom and messages
-  const loadChatroomData = async () => {
+  const loadChatroomData = useCallback(async () => {
     if (!chatroomId || !token) return;
 
     try {
@@ -245,7 +245,7 @@ export default function ChatDetail() {
       setMessages(sortedMessages);
 
       // Calculate static unread info only on initial load (not affected by WebSocket updates)
-      const unreadInfo = calculateUnreadInfo(sortedMessages);
+      const unreadInfo = calculateUnreadInfo(sortedMessages, user?.id);
       setStaticUnreadInfo(unreadInfo);
       console.log('[Chat] 📍 Static unread info calculated:', unreadInfo);
 
@@ -258,7 +258,7 @@ export default function ChatDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [chatroomId, token]); // Only essential dependencies to prevent infinite loops
 
   // Load data on mount and when chatroomId changes
   useEffect(() => {
@@ -277,7 +277,7 @@ export default function ChatDetail() {
         markAllMessagesAsRead();
       }
     };
-  }, [chatroomId, token, user?.id, markAllMessagesAsRead]);
+  }, [chatroomId, token]); // Removed user?.id and markAllMessagesAsRead to prevent infinite loop
 
   // Auto-mark messages as read when entering the chat room (immediate with debounce)
   useEffect(() => {
@@ -294,7 +294,7 @@ export default function ChatDetail() {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [chatroomId, user?.id, token, markAllMessagesAsRead]); // Triggers when entering a new room
+  }, [chatroomId, token]); // Removed user?.id and markAllMessagesAsRead to prevent infinite loop
 
   // Send message function
   const sendMessage = async () => {
@@ -409,8 +409,8 @@ export default function ChatDetail() {
   } | null>(null);
 
   // Calculate unread info only when initially loading messages (not on WebSocket updates)
-  const calculateUnreadInfo = useCallback((messageList: Message[]) => {
-    if (!messageList || messageList.length === 0 || !user?.id) return null;
+  const calculateUnreadInfo = useCallback((messageList: Message[], currentUserId?: number) => {
+    if (!messageList || messageList.length === 0 || !currentUserId) return null;
 
     // Sort messages by sent_at (oldest first for this calculation)
     const sortedMessages = [...messageList].sort((a, b) =>
@@ -422,11 +422,11 @@ export default function ChatDetail() {
       const message = sortedMessages[i];
 
       // Skip own messages
-      if (message.sender_id === user.id) continue;
+      if (message.sender_id === currentUserId) continue;
 
       // Check if current user has read this message
       const userReadStatus = message.read_status?.find(
-        status => status.user_id === user.id && status.is_read === true
+        status => status.user_id === currentUserId && status.is_read === true
       );
 
       if (!userReadStatus) {
@@ -436,9 +436,9 @@ export default function ChatDetail() {
 
         // Count total unread messages
         const unreadCount = sortedMessages.slice(i).filter(m => {
-          if (m.sender_id === user.id) return false;
+          if (m.sender_id === currentUserId) return false;
           const readStatus = m.read_status?.find(
-            status => status.user_id === user.id && status.is_read === true
+            status => status.user_id === currentUserId && status.is_read === true
           );
           return !readStatus;
         }).length;
@@ -452,7 +452,7 @@ export default function ChatDetail() {
     }
 
     return null;
-  }, [user?.id]);
+  }, []); // No dependencies to prevent infinite loops
 
   // Memoize read status calculations to prevent unnecessary recalculations
   const readStatusCache = useMemo(() => {

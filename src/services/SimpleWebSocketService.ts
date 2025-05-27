@@ -91,7 +91,16 @@ class SimpleWebSocketService {
 
       this.ws.onmessage = (event: WebSocketMessageEvent) => {
         try {
-          const data = typeof event.data === 'string' ? event.data : new TextDecoder().decode(event.data);
+          let data: string;
+          if (typeof event.data === 'string') {
+            data = event.data;
+          } else if (event.data instanceof ArrayBuffer) {
+            data = new TextDecoder().decode(event.data);
+          } else {
+            // Handle Blob case
+            console.warn('[SimpleWebSocketService] Received Blob data, converting to text');
+            return; // Skip Blob for now, or implement proper Blob handling
+          }
           const parsedData: WebSocketMessage = JSON.parse(data);
 
           // Handle heartbeat
