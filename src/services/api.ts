@@ -432,7 +432,31 @@ export const chatAPI = {
       console.log('[API] Fetching user\'s joined chatrooms...');
       const response = await api.get('/chatrooms/user');
       console.log('[API] Successfully fetched user chatrooms:', response.data);
-      return response.data;
+
+      // Fetch unread counts separately and merge them
+      try {
+        console.log('[API] Fetching unread counts...');
+        const unreadResponse = await api.get('/messages/unread-counts');
+        console.log('[API] Successfully fetched unread counts:', unreadResponse.data);
+
+        // Merge unread counts with chatrooms
+        const chatrooms = response.data.chatrooms || [];
+        const unreadCounts = unreadResponse.data || [];
+
+        const chatroomsWithUnreadCounts = chatrooms.map(chatroom => {
+          const unreadData = unreadCounts.find((item: any) => item.chatroom_id === chatroom.id);
+          return {
+            ...chatroom,
+            unread_count: unreadData?.unread_count || 0
+          };
+        });
+
+        console.log('[API] Merged chatrooms with unread counts');
+        return { chatrooms: chatroomsWithUnreadCounts };
+      } catch (unreadError) {
+        console.error('[API] Failed to fetch unread counts, using chatrooms without unread counts:', unreadError);
+        return response.data;
+      }
     } catch (error) {
       console.error('[API] Failed to fetch user conversations:', error);
       if (axios.isAxiosError(error)) {

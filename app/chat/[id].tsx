@@ -500,7 +500,14 @@ export default function ChatDetail() {
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
 
-      // Insert divider ABOVE (before) the oldest unread message
+      // Add the message first
+      result.push({
+        type: 'message',
+        data: message,
+        id: message.id || `message_${i}` // Ensure every message has an ID
+      });
+
+      // Insert divider AFTER the oldest unread message in array (appears ABOVE on inverted FlatList)
       if (!dividerInserted && message.id === staticUnreadInfo.messageId) {
         result.push({
           type: 'unread_divider',
@@ -509,12 +516,6 @@ export default function ChatDetail() {
         });
         dividerInserted = true;
       }
-
-      result.push({
-        type: 'message',
-        data: message,
-        id: message.id || `message_${i}` // Ensure every message has an ID
-      });
     }
 
     return result;
