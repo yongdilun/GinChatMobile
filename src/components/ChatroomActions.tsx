@@ -38,15 +38,6 @@ export function ChatroomActions({
   // Only show delete option for chatroom creator
   const canDelete = chatroom.created_by === currentUserId;
 
-  // Debug logging
-  console.log('[ChatroomActions] Debug info:', {
-    chatroomId: chatroom.id,
-    chatroomName: chatroom.name,
-    createdBy: chatroom.created_by,
-    currentUserId: currentUserId,
-    canDelete: canDelete
-  });
-
   const handleDelete = () => {
     Alert.alert(
       'Delete Chatroom',

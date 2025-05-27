@@ -251,7 +251,7 @@ export function ChatDetailHeader({
                   {audios.length > 0 ? (
                     audios.map((msg, index) => (
                       <View key={index} style={chatHeaderStyles.mediaAudioWrap}>
-                        <AudioPlayer uri={msg.media_url!} isCompact={true} />
+                        <AudioPlayer uri={msg.media_url!} isCompact={false} />
                       </View>
                     ))
                   ) : (

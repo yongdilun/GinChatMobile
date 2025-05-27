@@ -126,8 +126,8 @@ export const chatHeaderStyles = StyleSheet.create({
     fontWeight: '600',
   },
   tabContent: {
-    minHeight: 120,
-    maxHeight: 160, // Reduced to fit compact videos better
+    minHeight: 140,
+    maxHeight: 200, // Increased for better media display
   },
   membersContainer: {
     flex: 1,
@@ -165,20 +165,29 @@ export const chatHeaderStyles = StyleSheet.create({
     paddingVertical: 8,
   },
   mediaThumbnail: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
     borderRadius: 8,
     marginRight: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   mediaVideoWrap: {
-    marginRight: 8,
+    width: 160,
+    height: 120,
+    marginRight: 12,
     borderRadius: 8,
     overflow: 'hidden',
+    backgroundColor: '#000',
   },
   mediaAudioWrap: {
-    width: 200,
-    marginRight: 8,
+    width: 240,
+    height: 80,
+    marginRight: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 215, 0, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.2)',
+    padding: 8,
   },
   emptyTabText: {
     fontSize: 14,
