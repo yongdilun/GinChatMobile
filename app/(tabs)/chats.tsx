@@ -59,23 +59,26 @@ export default function ChatsScreen() {
     switch (message.type) {
       case 'new_message':
         console.log('[ChatsScreen] New message received, updating last message');
-        // Don't refresh chatrooms here - let unread_count_update handle the counts
-        // Just update the last message for the specific chatroom
+        // Update the last message for the specific chatroom and re-sort
         if (message.chatroom_id) {
           setChatrooms(prevChatrooms => {
-            return prevChatrooms.map(chatroom => {
+            const updatedChatrooms = prevChatrooms.map(chatroom => {
               if (chatroom.id === message.chatroom_id) {
                 return {
                   ...chatroom,
                   last_message: {
                     content: message.data.text_content || 'New message',
                     timestamp: message.data.sent_at || new Date().toISOString(),
-                    sender_id: message.data.sender_id
+                    sender_id: message.data.sender_id,
+                    sender_name: message.data.sender_name || 'Unknown'
                   }
                 };
               }
               return chatroom;
             });
+
+            // Re-sort by latest message timestamp after updating
+            return sortChatroomsByLatestMessage(updatedChatrooms);
           });
         }
         break;
@@ -176,6 +179,15 @@ export default function ChatsScreen() {
     };
   }, []);
 
+  // Helper function to sort chatrooms by latest message timestamp
+  const sortChatroomsByLatestMessage = (chatrooms: Chatroom[]) => {
+    return chatrooms.sort((a, b) => {
+      const aTime = a.last_message?.timestamp ? new Date(a.last_message.timestamp).getTime() : 0;
+      const bTime = b.last_message?.timestamp ? new Date(b.last_message.timestamp).getTime() : 0;
+      return bTime - aTime; // Descending order (newest first)
+    });
+  };
+
   const fetchChatrooms = async () => {
     try {
       setLoading(true);
@@ -192,9 +204,11 @@ export default function ChatsScreen() {
         });
       }
 
-      // Use fresh data from API, don't preserve old unread counts
-      // WebSocket updates will handle real-time unread count changes
-      setChatrooms(response.chatrooms || []);
+      // Sort chatrooms by latest message timestamp (most recent first)
+      const sortedChatrooms = sortChatroomsByLatestMessage(response.chatrooms || []);
+
+      console.log('[ChatsScreen] Sorted chatrooms by latest message timestamp');
+      setChatrooms(sortedChatrooms);
 
     } catch (err) {
       console.error('Error fetching chatrooms:', err);
@@ -391,7 +405,9 @@ export default function ChatsScreen() {
       }
 
       if (hasUpdates) {
-        setChatrooms(updatedChatrooms);
+        // Sort by latest message timestamp after updating last messages
+        const sortedChatrooms = sortChatroomsByLatestMessage(updatedChatrooms);
+        setChatrooms(sortedChatrooms);
       }
     };
 
