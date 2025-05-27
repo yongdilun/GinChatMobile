@@ -34,9 +34,57 @@ export function ChatDetailHeader({
   const [activeTab, setActiveTab] = useState<'members' | 'images' | 'videos' | 'audio'>('members');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const images = messages.filter(m => m.message_type.includes('picture') && m.media_url);
-  const videos = messages.filter(m => m.message_type.includes('video') && m.media_url);
-  const audios = messages.filter(m => m.message_type.includes('audio') && m.media_url);
+  // Debug logging for media filtering
+  console.log('[ChatDetailHeader] Total messages:', messages.length);
+  if (messages.length > 0) {
+    console.log('[ChatDetailHeader] Sample message structure:', messages[0]);
+    console.log('[ChatDetailHeader] All message types:', messages.map(m => m.message_type));
+    console.log('[ChatDetailHeader] Messages with media:', messages.filter(m => m.media_url).map(m => ({
+      type: m.message_type,
+      url: m.media_url,
+      id: m.id
+    })));
+  }
+
+  // More robust filtering - handle potential field name variations and ensure media_url exists and is not empty
+  const images = messages.filter(m => {
+    const hasImageType = m.message_type && (
+      m.message_type.includes('picture') ||
+      m.message_type === 'picture' ||
+      m.message_type === 'text_and_picture'
+    );
+    const hasMediaUrl = m.media_url && m.media_url.trim() !== '';
+    return hasImageType && hasMediaUrl;
+  });
+
+  const videos = messages.filter(m => {
+    const hasVideoType = m.message_type && (
+      m.message_type.includes('video') ||
+      m.message_type === 'video' ||
+      m.message_type === 'text_and_video'
+    );
+    const hasMediaUrl = m.media_url && m.media_url.trim() !== '';
+    return hasVideoType && hasMediaUrl;
+  });
+
+  const audios = messages.filter(m => {
+    const hasAudioType = m.message_type && (
+      m.message_type.includes('audio') ||
+      m.message_type === 'audio' ||
+      m.message_type === 'text_and_audio'
+    );
+    const hasMediaUrl = m.media_url && m.media_url.trim() !== '';
+    return hasAudioType && hasMediaUrl;
+  });
+
+  console.log('[ChatDetailHeader] Filtered media:', {
+    images: images.length,
+    videos: videos.length,
+    audios: audios.length,
+    imageMessages: images.map(m => ({ type: m.message_type, url: m.media_url, id: m.id })),
+    videoMessages: videos.map(m => ({ type: m.message_type, url: m.media_url, id: m.id })),
+    audioMessages: audios.map(m => ({ type: m.message_type, url: m.media_url, id: m.id }))
+  });
 
   if (!chatroom) {
     return null;
@@ -222,12 +270,21 @@ export function ChatDetailHeader({
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={chatHeaderStyles.mediaScrollView}>
                   {images.length > 0 ? (
                     images.map((msg, index) => (
-                      <TouchableOpacity key={index} onPress={() => setSelectedImage(msg.media_url!)}>
-                        <Image source={{ uri: msg.media_url! }} style={chatHeaderStyles.mediaThumbnail} />
+                      <TouchableOpacity
+                        key={`image-${msg.id}-${index}`}
+                        onPress={() => setSelectedImage(msg.media_url!)}
+                      >
+                        <Image
+                          source={{ uri: msg.media_url! }}
+                          style={chatHeaderStyles.mediaThumbnail}
+                          onError={(error) => {
+                            console.error('[ChatDetailHeader] Image load error:', error, 'URL:', msg.media_url);
+                          }}
+                        />
                       </TouchableOpacity>
                     ))
                   ) : (
-                    <Text style={chatHeaderStyles.emptyTabText}>No images yet</Text>
+                    <Text style={chatHeaderStyles.emptyTabText}>No images uploaded</Text>
                   )}
                 </ScrollView>
               )}
@@ -236,12 +293,16 @@ export function ChatDetailHeader({
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={chatHeaderStyles.mediaScrollView}>
                   {videos.length > 0 ? (
                     videos.map((msg, index) => (
-                      <View key={index} style={chatHeaderStyles.mediaVideoWrap}>
-                        <VideoPlayer uri={msg.media_url!} isCompact={true} isHeaderMode={true} />
+                      <View key={`video-${msg.id}-${index}`} style={chatHeaderStyles.mediaVideoWrap}>
+                        <VideoPlayer
+                          uri={msg.media_url!}
+                          isCompact={true}
+                          isHeaderMode={true}
+                        />
                       </View>
                     ))
                   ) : (
-                    <Text style={chatHeaderStyles.emptyTabText}>No videos yet</Text>
+                    <Text style={chatHeaderStyles.emptyTabText}>No videos uploaded</Text>
                   )}
                 </ScrollView>
               )}
@@ -250,12 +311,15 @@ export function ChatDetailHeader({
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={chatHeaderStyles.mediaScrollView}>
                   {audios.length > 0 ? (
                     audios.map((msg, index) => (
-                      <View key={index} style={chatHeaderStyles.mediaAudioWrap}>
-                        <AudioPlayer uri={msg.media_url!} isCompact={true} />
+                      <View key={`audio-${msg.id}-${index}`} style={chatHeaderStyles.mediaAudioWrap}>
+                        <AudioPlayer
+                          uri={msg.media_url!}
+                          isCompact={true}
+                        />
                       </View>
                     ))
                   ) : (
-                    <Text style={chatHeaderStyles.emptyTabText}>No audio files yet</Text>
+                    <Text style={chatHeaderStyles.emptyTabText}>No audio uploaded</Text>
                   )}
                 </ScrollView>
               )}
