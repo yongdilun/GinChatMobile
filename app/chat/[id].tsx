@@ -9,6 +9,7 @@ import {
   View,
   Alert,
   StatusBar,
+  Text,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -29,6 +30,7 @@ import { MessageInput } from '../../src/components/chat/MessageInput';
 import { ImageModal } from '../../src/components/chat/ImageModal';
 import { UnreadMessageIndicator } from '../../src/components/chat/UnreadMessageIndicator';
 import { UnreadMessageDivider } from '../../src/components/chat/UnreadMessageDivider';
+import { FixedUnreadDivider } from '../../src/components/chat/FixedUnreadDivider';
 import { useWebSocketHandler } from '../../src/hooks/useWebSocketHandler';
 import { usePaginatedMessages } from '../../src/hooks/usePaginatedMessages';
 import { useMediaPicker } from '../../src/hooks/useMediaPicker';
@@ -76,6 +78,8 @@ export default function ChatDetail() {
     loading,
     loadingMore,
     error: messagesError,
+    firstUnreadMessageId,
+    unreadMessageIndex,
     loadInitialMessages,
     loadMoreMessages,
     addNewMessage,
@@ -238,13 +242,11 @@ export default function ChatDetail() {
       console.log('[Chat] 📋 Loaded chatroom:', chatroomResponse.chatroom);
 
       // Load messages using the new paginated system
-      await loadInitialMessages();
+      await loadInitialMessages(user?.id);
       console.log('[Chat] 📨 Loaded paginated messages');
 
-      // Calculate static unread info only on initial load (not affected by WebSocket updates)
-      const unreadInfo = calculateUnreadInfo(messages, user?.id);
-      setStaticUnreadInfo(unreadInfo);
-      console.log('[Chat] 📍 Static unread info calculated:', unreadInfo);
+      // Note: Unread info is now calculated by the usePaginatedMessages hook
+      console.log('[Chat] 📍 Fixed unread divider position set by hook');
 
       // Note: Messages will be marked as read by the room entry useEffect
       // after a 1.5 second delay to ensure messages are loaded
@@ -259,9 +261,7 @@ export default function ChatDetail() {
   useEffect(() => {
     // Reset the mark-as-read flag when entering a new chatroom
     hasMarkedAsReadRef.current = false;
-    // Reset static unread info when entering new chatroom
-    setStaticUnreadInfo(null);
-    // Reset messages for new chatroom
+    // Reset messages for new chatroom (this also resets unread divider position)
     resetMessages();
     loadChatroomData();
 
@@ -398,58 +398,10 @@ export default function ChatDetail() {
     return colors[index];
   };
 
-  // Static unread message info - only calculated on room entry, not affected by WebSocket updates
-  const [staticUnreadInfo, setStaticUnreadInfo] = useState<{
-    messageId: string;
-    originalIndex: number;
-    unreadCount: number;
-  } | null>(null);
+  // Note: Static unread info is now handled by the usePaginatedMessages hook
+  // The fixed unread divider position is calculated once when entering the room
 
-  // Calculate unread info only when initially loading messages (not on WebSocket updates)
-  const calculateUnreadInfo = useCallback((messageList: Message[], currentUserId?: number) => {
-    if (!messageList || messageList.length === 0 || !currentUserId) return null;
-
-    // Sort messages by sent_at (oldest first for this calculation)
-    const sortedMessages = [...messageList].sort((a, b) =>
-      new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
-    );
-
-    // Find the first message that the current user hasn't read
-    for (let i = 0; i < sortedMessages.length; i++) {
-      const message = sortedMessages[i];
-
-      // Skip own messages
-      if (message.sender_id === currentUserId) continue;
-
-      // Check if current user has read this message
-      const userReadStatus = message.read_status?.find(
-        status => status.user_id === currentUserId && status.is_read === true
-      );
-
-      if (!userReadStatus) {
-        // Found the oldest unread message
-        // Find its index in the original messages array (which is sorted newest first)
-        const originalIndex = messageList.findIndex(m => m.id === message.id);
-
-        // Count total unread messages
-        const unreadCount = sortedMessages.slice(i).filter(m => {
-          if (m.sender_id === currentUserId) return false;
-          const readStatus = m.read_status?.find(
-            status => status.user_id === currentUserId && status.is_read === true
-          );
-          return !readStatus;
-        }).length;
-
-        return {
-          messageId: message.id,
-          originalIndex,
-          unreadCount
-        };
-      }
-    }
-
-    return null;
-  }, []); // No dependencies to prevent infinite loops
+  // Note: Unread message calculation is now handled by the usePaginatedMessages hook
 
   // Memoize read status calculations to prevent unnecessary recalculations
   const readStatusCache = useMemo(() => {
@@ -490,9 +442,9 @@ export default function ChatDetail() {
     return cache;
   }, [messages, user?.id, chatroom?.members]);
 
-  // Create combined data structure with messages and unread divider
+  // Create combined data structure with messages and fixed unread divider
   const messagesWithDivider = useMemo(() => {
-    if (!staticUnreadInfo) {
+    if (!firstUnreadMessageId || unreadCount === 0) {
       // No unread messages, return original messages with proper structure
       return messages.map((msg, index) => ({
         type: 'message',
@@ -514,19 +466,19 @@ export default function ChatDetail() {
         id: message.id || `message_${i}` // Ensure every message has an ID
       });
 
-      // Insert divider AFTER the oldest unread message in array (appears ABOVE on inverted FlatList)
-      if (!dividerInserted && message.id === staticUnreadInfo.messageId) {
+      // Insert fixed divider AFTER the oldest unread message in array (appears ABOVE on inverted FlatList)
+      if (!dividerInserted && message.id === firstUnreadMessageId) {
         result.push({
-          type: 'unread_divider',
-          data: { unreadCount: staticUnreadInfo.unreadCount },
-          id: `unread_divider_${message.id || i}` // Ensure unique ID
+          type: 'fixed_unread_divider',
+          data: { unreadCount },
+          id: `fixed_unread_divider_${message.id || i}` // Ensure unique ID
         });
         dividerInserted = true;
       }
     }
 
     return result;
-  }, [messages, staticUnreadInfo]);
+  }, [messages, firstUnreadMessageId, unreadCount]);
 
   // Get read status for messages (now uses cache)
   const getReadStatus = useCallback((message: Message) => {
@@ -571,6 +523,10 @@ export default function ChatDetail() {
   const renderItem = useCallback(({ item }: { item: any }) => {
     if (item.type === 'unread_divider') {
       return <UnreadMessageDivider unreadCount={item.data.unreadCount} />;
+    }
+
+    if (item.type === 'fixed_unread_divider') {
+      return <FixedUnreadDivider unreadCount={item.data.unreadCount} />;
     }
 
     // Regular message item
@@ -646,20 +602,34 @@ export default function ChatDetail() {
           inverted
           onEndReachedThreshold={0.1}
           onEndReached={() => {
-            // Load more messages when scrolling to top (since list is inverted)
+            // In an inverted FlatList, onEndReached fires when scrolling to the TOP (newest messages)
+            // We want to load older messages when scrolling to the BOTTOM (oldest messages)
+            // So we should NOT load more messages here
+            console.log('[Chat] 📄 Reached end of list (newest messages)');
+          }}
+          onStartReached={() => {
+            // In an inverted FlatList, onStartReached fires when scrolling to the BOTTOM (oldest messages)
+            // This is where we want to load more older messages
             if (hasMore && !loadingMore) {
-              console.log('[Chat] 📄 Loading more messages...');
+              console.log('[Chat] 📄 Loading more older messages...');
               loadMoreMessages();
             }
           }}
+          onStartReachedThreshold={0.1}
           onScrollToIndexFailed={(info) => {
             // Handle scroll index failed
             console.warn('Scroll to index failed:', info);
           }}
-          ListFooterComponent={
+          ListHeaderComponent={
             loadingMore ? (
               <View style={{ padding: 16, alignItems: 'center' }}>
                 <ActivityIndicator size="small" color={GoldTheme.gold.primary} />
+              </View>
+            ) : !hasMore && messages.length > 0 ? (
+              <View style={{ padding: 16, alignItems: 'center' }}>
+                <Text style={{ color: GoldTheme.text.muted, fontSize: 14 }}>
+                  No more messages
+                </Text>
               </View>
             ) : null
           }

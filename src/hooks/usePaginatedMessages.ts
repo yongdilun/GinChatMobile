@@ -10,10 +10,12 @@ interface PaginatedMessagesState {
   loading: boolean;
   loadingMore: boolean;
   error: string | null;
+  firstUnreadMessageId?: string;
+  unreadMessageIndex?: number;
 }
 
 interface UsePaginatedMessagesReturn extends PaginatedMessagesState {
-  loadInitialMessages: () => Promise<void>;
+  loadInitialMessages: (currentUserId?: number) => Promise<void>;
   loadMoreMessages: () => Promise<void>;
   addNewMessage: (message: Message) => void;
   updateMessage: (messageId: string, updates: Partial<Message>) => void;
@@ -31,13 +33,50 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
     loading: false,
     loadingMore: false,
     error: null,
+    firstUnreadMessageId: undefined,
+    unreadMessageIndex: undefined,
   });
 
   // Track if we've loaded initial messages to prevent duplicate calls
   const hasLoadedInitial = useRef(false);
   const isLoadingRef = useRef(false);
 
-  const loadInitialMessages = useCallback(async () => {
+  // Function to find the first unread message for the current user
+  const findFirstUnreadMessage = useCallback((messages: Message[], currentUserId?: number) => {
+    if (!currentUserId || !messages.length) return null;
+
+    // Sort messages chronologically (oldest first) for finding the first unread
+    const sortedMessages = [...messages].sort((a, b) =>
+      new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+    );
+
+    // Find the first message that the current user hasn't read
+    for (let i = 0; i < sortedMessages.length; i++) {
+      const message = sortedMessages[i];
+
+      // Skip own messages
+      if (message.sender_id === currentUserId) continue;
+
+      // Check if current user has read this message
+      const userReadStatus = message.read_status?.find(
+        status => status.user_id === currentUserId && status.is_read === true
+      );
+
+      if (!userReadStatus) {
+        // Found the oldest unread message
+        // Find its index in the display order (newest first)
+        const displayIndex = messages.findIndex(m => m.id === message.id);
+        return {
+          messageId: message.id,
+          displayIndex,
+        };
+      }
+    }
+
+    return null;
+  }, []);
+
+  const loadInitialMessages = useCallback(async (currentUserId?: number) => {
     if (isLoadingRef.current || hasLoadedInitial.current) {
       console.log('[usePaginatedMessages] Skipping initial load - already loading or loaded');
       return;
@@ -64,6 +103,9 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
         new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
       );
 
+      // Find the first unread message position (only set once when entering the room)
+      const firstUnreadInfo = findFirstUnreadMessage(sortedMessages, currentUserId);
+
       setState(prev => ({
         ...prev,
         messages: sortedMessages,
@@ -73,10 +115,15 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
         totalCount: response.total_count,
         loading: false,
         error: null,
+        firstUnreadMessageId: firstUnreadInfo?.messageId,
+        unreadMessageIndex: firstUnreadInfo?.displayIndex,
       }));
 
       hasLoadedInitial.current = true;
-      console.log('[usePaginatedMessages] ✅ Initial messages loaded successfully');
+      console.log('[usePaginatedMessages] ✅ Initial messages loaded successfully', {
+        firstUnreadMessageId: firstUnreadInfo?.messageId,
+        unreadMessageIndex: firstUnreadInfo?.displayIndex,
+      });
 
     } catch (error) {
       console.error('[usePaginatedMessages] Error loading initial messages:', error);
@@ -88,7 +135,7 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
     } finally {
       isLoadingRef.current = false;
     }
-  }, [chatroomId]);
+  }, [chatroomId, findFirstUnreadMessage]);
 
   const loadMoreMessages = useCallback(async () => {
     if (isLoadingRef.current || !state.hasMore || !state.nextCursor) {
@@ -178,6 +225,8 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
       loading: false,
       loadingMore: false,
       error: null,
+      firstUnreadMessageId: undefined,
+      unreadMessageIndex: undefined,
     });
     hasLoadedInitial.current = false;
     isLoadingRef.current = false;
