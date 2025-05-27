@@ -602,25 +602,18 @@ export default function ChatDetail() {
           inverted
           onEndReachedThreshold={0.1}
           onEndReached={() => {
-            // In an inverted FlatList, onEndReached fires when scrolling to the TOP (newest messages)
-            // We want to load older messages when scrolling to the BOTTOM (oldest messages)
-            // So we should NOT load more messages here
-            console.log('[Chat] 📄 Reached end of list (newest messages)');
-          }}
-          onStartReached={() => {
-            // In an inverted FlatList, onStartReached fires when scrolling to the BOTTOM (oldest messages)
+            // In an inverted FlatList, onEndReached fires when scrolling to the TOP (oldest messages)
             // This is where we want to load more older messages
             if (hasMore && !loadingMore) {
               console.log('[Chat] 📄 Loading more older messages...');
               loadMoreMessages();
             }
           }}
-          onStartReachedThreshold={0.1}
           onScrollToIndexFailed={(info) => {
             // Handle scroll index failed
             console.warn('Scroll to index failed:', info);
           }}
-          ListHeaderComponent={
+          ListFooterComponent={
             loadingMore ? (
               <View style={{ padding: 16, alignItems: 'center' }}>
                 <ActivityIndicator size="small" color={GoldTheme.gold.primary} />

@@ -40,6 +40,8 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
   // Track if we've loaded initial messages to prevent duplicate calls
   const hasLoadedInitial = useRef(false);
   const isLoadingRef = useRef(false);
+  const isLoadingMoreRef = useRef(false);
+  const lastLoadTimeRef = useRef(0);
 
   // Function to find the first unread message for the current user
   const findFirstUnreadMessage = useCallback((messages: Message[], currentUserId?: number) => {
@@ -138,12 +140,27 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
   }, [chatroomId, findFirstUnreadMessage]);
 
   const loadMoreMessages = useCallback(async () => {
-    if (isLoadingRef.current || !state.hasMore || !state.nextCursor) {
-      console.log('[usePaginatedMessages] Skipping load more - conditions not met');
+    const now = Date.now();
+    const timeSinceLastLoad = now - lastLoadTimeRef.current;
+
+    // Prevent rapid successive calls (throttle to 1 second)
+    if (timeSinceLastLoad < 1000) {
+      console.log('[usePaginatedMessages] Throttling load more - too soon since last call');
       return;
     }
 
-    isLoadingRef.current = true;
+    if (isLoadingRef.current || isLoadingMoreRef.current || !state.hasMore || !state.nextCursor) {
+      console.log('[usePaginatedMessages] Skipping load more - conditions not met', {
+        isLoading: isLoadingRef.current,
+        isLoadingMore: isLoadingMoreRef.current,
+        hasMore: state.hasMore,
+        hasCursor: !!state.nextCursor
+      });
+      return;
+    }
+
+    isLoadingMoreRef.current = true;
+    lastLoadTimeRef.current = now;
     setState(prev => ({ ...prev, loadingMore: true, error: null }));
 
     try {
@@ -185,7 +202,7 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
         error: 'Failed to load more messages',
       }));
     } finally {
-      isLoadingRef.current = false;
+      isLoadingMoreRef.current = false;
     }
   }, [chatroomId, state.hasMore, state.nextCursor]);
 
@@ -230,6 +247,8 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
     });
     hasLoadedInitial.current = false;
     isLoadingRef.current = false;
+    isLoadingMoreRef.current = false;
+    lastLoadTimeRef.current = 0;
   }, []);
 
   return {
