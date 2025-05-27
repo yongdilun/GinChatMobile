@@ -1990,8 +1990,7 @@ export default function ChatDetailScreen() {
 
   const {
     connectToRoom,
-    disconnectFromRoom,
-    switchToSidebar,
+    connectToSidebar,
     addMessageHandler,
     removeMessageHandler,
   } = useSimpleWebSocket();
@@ -2156,23 +2155,23 @@ export default function ChatDetailScreen() {
 
 
 
-  // SIMPLIFIED: Connect to WebSocket - no delays, no complex logic
+  // Connect to chat room WebSocket
   useEffect(() => {
     if (chatroomId && user?.id) {
       console.log('[Chat] 🔌 Connecting to WebSocket room:', chatroomId);
 
-      // Add message handler and connect immediately
+      // Add message handler and connect to room
       addMessageHandler(handleIncomingMessage);
       connectToRoom(chatroomId);
 
       return () => {
         console.log('[Chat] 🔌 Cleaning up WebSocket connection for room:', chatroomId);
         removeMessageHandler(handleIncomingMessage);
-        // Switch back to sidebar when leaving chat room
-        switchToSidebar();
+        // Reconnect to sidebar when leaving chat room
+        connectToSidebar();
       };
     }
-  }, [chatroomId, user?.id, connectToRoom, switchToSidebar, addMessageHandler, removeMessageHandler, handleIncomingMessage]); // SIMPLIFIED: Minimal dependencies
+  }, [chatroomId, user?.id]);
 
   const fetchChatroom = async () => {
     if (!chatroomId) return;

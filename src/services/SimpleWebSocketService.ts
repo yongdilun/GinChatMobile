@@ -26,10 +26,10 @@ class SimpleWebSocketService {
   private messageHandlers: Set<(data: WebSocketMessage) => void> = new Set();
   private isConnecting: boolean = false;
   private isManualDisconnect: boolean = false;
-  private pendingConnection: { roomId: string; token: string; options?: WebSocketServiceOptions } | null = null;
-  private connectionQueue: Array<{ roomId: string; token: string; options?: WebSocketServiceOptions }> = [];
+  private lastConnectionAttempt: number = 0;
+  private readonly CONNECTION_COOLDOWN = 2000; // 2 seconds between connections
 
-  // Simple connection method - with proper connection management
+  // Simplified connection method with cooldown
   public connect(roomId: string, token: string, options?: WebSocketServiceOptions): void {
     if (!roomId || !token) {
       console.error("[SimpleWebSocketService] Room ID and token are required");
@@ -43,21 +43,27 @@ class SimpleWebSocketService {
       return;
     }
 
-    // If currently connecting or have pending connection, queue this request
-    if (this.isConnecting || this.pendingConnection) {
-      console.log("[SimpleWebSocketService] Connection in progress, queueing request for:", roomId);
-      // Remove any existing request for the same room
-      this.connectionQueue = this.connectionQueue.filter(req => req.roomId !== roomId);
-      // Add new request to queue
-      this.connectionQueue.push({ roomId, token, options });
+    // Prevent rapid connection attempts
+    const now = Date.now();
+    if (now - this.lastConnectionAttempt < this.CONNECTION_COOLDOWN) {
+      console.log("[SimpleWebSocketService] Connection cooldown active, ignoring request for:", roomId);
       return;
     }
 
-    // If connecting to a different room, disconnect first and wait
+    // If currently connecting, ignore new requests
+    if (this.isConnecting) {
+      console.log("[SimpleWebSocketService] Already connecting, ignoring request for:", roomId);
+      return;
+    }
+
+    // If connecting to a different room, disconnect first
     if (this.ws && this.currentRoomId !== roomId) {
       console.log("[SimpleWebSocketService] Switching from", this.currentRoomId, "to", roomId);
-      this.pendingConnection = { roomId, token, options };
       this.disconnect();
+      // Wait before connecting to new room
+      setTimeout(() => {
+        this.connectToRoom(roomId, token, options);
+      }, 1000);
       return;
     }
 
@@ -67,6 +73,7 @@ class SimpleWebSocketService {
   private connectToRoom(roomId: string, token: string, options?: WebSocketServiceOptions): void {
     this.isConnecting = true;
     this.isManualDisconnect = false;
+    this.lastConnectionAttempt = Date.now();
     this.currentRoomId = roomId;
     this.currentToken = token;
 
@@ -79,11 +86,7 @@ class SimpleWebSocketService {
       this.ws.onopen = () => {
         console.log("[SimpleWebSocketService] ✅ Connected to room:", roomId);
         this.isConnecting = false;
-        this.pendingConnection = null;
         if (options?.onOpen) options.onOpen();
-
-        // Process any queued connections
-        this.processConnectionQueue();
       };
 
       this.ws.onmessage = (event: WebSocketMessageEvent) => {
@@ -124,12 +127,12 @@ class SimpleWebSocketService {
 
         // Simple reconnection: only if not manual disconnect and connection was stable
         if (!this.isManualDisconnect && event.code !== 1000 && this.currentRoomId && this.currentToken) {
-          console.log("[SimpleWebSocketService] 🔄 Reconnecting in 3 seconds...");
+          console.log("[SimpleWebSocketService] 🔄 Reconnecting in 5 seconds...");
           setTimeout(() => {
             if (!this.isManualDisconnect && this.currentRoomId && this.currentToken) {
-              this.connectToRoom(this.currentRoomId, this.currentToken, options);
+              this.connect(this.currentRoomId, this.currentToken, options);
             }
-          }, 3000);
+          }, 5000);
         }
       };
 
@@ -167,30 +170,6 @@ class SimpleWebSocketService {
     this.ws = null;
     this.currentRoomId = null;
     this.currentToken = null;
-
-    // Process pending connection after disconnect (only if not manual)
-    const wasPendingConnection = this.pendingConnection;
-    this.pendingConnection = null;
-
-    if (wasPendingConnection && !this.isManualDisconnect) {
-      setTimeout(() => {
-        console.log("[SimpleWebSocketService] Processing pending connection to:", wasPendingConnection.roomId);
-        this.isManualDisconnect = false; // Reset flag
-        this.connectToRoom(wasPendingConnection.roomId, wasPendingConnection.token, wasPendingConnection.options);
-      }, 1500);
-    }
-  }
-
-  private processConnectionQueue(): void {
-    if (this.connectionQueue.length > 0 && !this.isConnecting) {
-      const nextConnection = this.connectionQueue.shift();
-      if (nextConnection) {
-        console.log("[SimpleWebSocketService] Processing queued connection to:", nextConnection.roomId);
-        setTimeout(() => {
-          this.connect(nextConnection.roomId, nextConnection.token, nextConnection.options);
-        }, 500);
-      }
-    }
   }
 
   // Send message

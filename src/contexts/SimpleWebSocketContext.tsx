@@ -17,8 +17,6 @@ interface WebSocketContextType {
   connectToRoom: (roomId: string) => void;
   connectToSidebar: () => void;
   disconnectFromRoom: () => void;
-  disconnectFromSidebar: () => void;
-  switchToSidebar: () => void;
   addMessageHandler: (handler: (message: WebSocketMessage) => void) => void;
   removeMessageHandler: (handler: (message: WebSocketMessage) => void) => void;
   sendMessage: (data: object) => boolean;
@@ -68,27 +66,7 @@ export const SimpleWebSocketProvider: React.FC<{ children: ReactNode }> = ({ chi
     setCurrentRoomId(null);
   }, []);
 
-  const disconnectFromSidebar = useCallback(() => {
-    console.log("[SimpleWebSocketContext] 🔌 Disconnecting from sidebar...");
-    // Only disconnect if we're actually connected to the sidebar
-    if (currentRoomId === "global_sidebar") {
-      simpleWebSocketService.disconnect();
-      setIsConnected(false);
-      setCurrentRoomId(null);
-    } else {
-      console.log("[SimpleWebSocketContext] Not connected to sidebar, ignoring disconnect request");
-    }
-  }, [currentRoomId]);
 
-  const switchToSidebar = useCallback(() => {
-    console.log("[SimpleWebSocketContext] 🔄 Switching to sidebar...");
-    // If not already connected to sidebar, connect
-    if (currentRoomId !== "global_sidebar") {
-      connectToSidebar();
-    } else {
-      console.log("[SimpleWebSocketContext] Already connected to sidebar");
-    }
-  }, [currentRoomId, connectToSidebar]);
 
   // Message handlers
   const addMessageHandler = useCallback((handler: (message: WebSocketMessage) => void) => {
@@ -137,8 +115,6 @@ export const SimpleWebSocketProvider: React.FC<{ children: ReactNode }> = ({ chi
     connectToRoom,
     connectToSidebar,
     disconnectFromRoom,
-    disconnectFromSidebar,
-    switchToSidebar,
     addMessageHandler,
     removeMessageHandler,
     sendMessage,

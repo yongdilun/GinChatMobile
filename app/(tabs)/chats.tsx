@@ -14,7 +14,7 @@ import { GoldTheme } from '../../constants/GoldTheme';
 
 export default function ChatsScreen() {
   const { user, logout } = useAuth();
-  const { connectToSidebar, disconnectFromRoom, disconnectFromSidebar, addMessageHandler, removeMessageHandler, isConnected, currentRoomId } = useSimpleWebSocket();
+  const { connectToSidebar, disconnectFromRoom, addMessageHandler, removeMessageHandler, isConnected, currentRoomId } = useSimpleWebSocket();
   const [chatrooms, setChatrooms] = useState<Chatroom[]>([]);
   const [availableChatrooms, setAvailableChatrooms] = useState<Chatroom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,20 +110,21 @@ export default function ChatsScreen() {
     console.log('[ChatsScreen] Component mounted, setting up sidebar WebSocket');
     console.log('[ChatsScreen] Current connection state - isConnected:', isConnected, 'currentRoomId:', currentRoomId);
 
-    // Always try to connect to sidebar - the service will queue if needed
-    console.log('[ChatsScreen] 🔌 Requesting sidebar connection');
-    addMessageHandler(handleWebSocketMessage);
-    connectToSidebar();
+    // Only connect if not already connected to sidebar
+    if (currentRoomId !== 'global_sidebar') {
+      console.log('[ChatsScreen] 🔌 Connecting to sidebar');
+      addMessageHandler(handleWebSocketMessage);
+      connectToSidebar();
+    } else {
+      console.log('[ChatsScreen] Already connected to sidebar, just adding handler');
+      addMessageHandler(handleWebSocketMessage);
+    }
 
     return () => {
-      console.log('[ChatsScreen] 🔌 Component unmounting, cleaning up WebSocket');
+      console.log('[ChatsScreen] 🔌 Component unmounting, removing message handler');
       removeMessageHandler(handleWebSocketMessage);
-      // Only disconnect if we're actually connected to sidebar
-      if (currentRoomId === 'global_sidebar') {
-        disconnectFromSidebar();
-      }
     };
-  }, [connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, handleWebSocketMessage]);
+  }, []);
 
   useEffect(() => {
     fetchChatrooms();
