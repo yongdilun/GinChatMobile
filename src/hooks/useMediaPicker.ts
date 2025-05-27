@@ -211,9 +211,9 @@ export function useMediaPicker() {
           'Choose the type of media you want to send',
           [
             { text: 'Cancel', style: 'cancel' },
+            { text: 'Photo/Video', onPress: () => pickFromGallery() },
             { text: 'Camera', onPress: () => pickFromCamera() },
-            { text: 'Gallery', onPress: () => pickFromGallery() },
-            { text: 'Document', onPress: () => pickDocument() },
+            { text: 'Audio File', onPress: () => pickDocument() },
           ]
         );
       }
@@ -228,10 +228,11 @@ export function useMediaPicker() {
   const pickFromCamera = async () => {
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        mediaTypes: [ImagePicker.MediaType.Images, ImagePicker.MediaType.Videos],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
+        videoMaxDuration: 60, // 60 seconds max
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -240,6 +241,8 @@ export function useMediaPicker() {
           uri: asset.uri,
           type: asset.type === 'video' ? 'video' : 'image',
           mimeType: asset.type === 'video' ? 'video/mp4' : 'image/jpeg',
+          name: asset.fileName || `${asset.type}_${Date.now()}`,
+          size: asset.fileSize ? Math.round(asset.fileSize / 1024) : undefined,
           backendType: asset.type === 'video' ? 'video' : 'picture',
         });
       }
@@ -252,10 +255,11 @@ export function useMediaPicker() {
   const pickFromGallery = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        mediaTypes: [ImagePicker.MediaType.Images, ImagePicker.MediaType.Videos],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
+        videoMaxDuration: 60, // 60 seconds max
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -264,6 +268,8 @@ export function useMediaPicker() {
           uri: asset.uri,
           type: asset.type === 'video' ? 'video' : 'image',
           mimeType: asset.type === 'video' ? 'video/mp4' : 'image/jpeg',
+          name: asset.fileName || `${asset.type}_${Date.now()}`,
+          size: asset.fileSize ? Math.round(asset.fileSize / 1024) : undefined,
           backendType: asset.type === 'video' ? 'video' : 'picture',
         });
       }

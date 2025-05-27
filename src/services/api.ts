@@ -317,9 +317,17 @@ export interface Chatroom {
 export const mediaAPI = {
   uploadMedia: async (file: { uri: string; type: string; name?: string }, messageType: string) => {
     try {
+      console.log('[MediaAPI] Starting upload:', {
+        uri: file.uri.substring(0, 50) + '...',
+        type: file.type,
+        name: file.name,
+        messageType
+      });
+
       // Validate message type
       const validMessageTypes = ['picture', 'audio', 'video', 'text_and_picture', 'text_and_audio', 'text_and_video'];
       if (!validMessageTypes.includes(messageType)) {
+        console.log('[MediaAPI] Invalid message type, defaulting to picture:', messageType);
         messageType = 'picture';
       }
 
@@ -404,6 +412,13 @@ export const mediaAPI = {
       // Add message_type parameter
       formData.append('message_type', messageType);
 
+      console.log('[MediaAPI] Sending upload request to:', `${API_URL}/media/upload`);
+      console.log('[MediaAPI] Upload headers:', {
+        'Authorization': `Bearer ${token ? token.substring(0, 20) + '...' : 'none'}`,
+        'Accept': 'application/json',
+        'Content-Type': Platform.OS !== 'web' ? 'multipart/form-data' : 'auto'
+      });
+
       // Use axios for better cross-platform compatibility
       const response = await axios.post(`${API_URL}/media/upload`, formData, {
         headers: {
@@ -411,15 +426,24 @@ export const mediaAPI = {
           'Accept': 'application/json',
           // Let axios set the content-type header with boundary
           ...(Platform.OS !== 'web' ? { 'Content-Type': 'multipart/form-data' } : {})
-        }
+        },
+        timeout: 30000, // 30 second timeout
       });
 
+      console.log('[MediaAPI] Upload successful:', response.data);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('Upload failed:', error.response?.status);
+        console.error('[MediaAPI] Upload failed with status:', error.response?.status);
+        console.error('[MediaAPI] Error response data:', error.response?.data);
+        console.error('[MediaAPI] Error response headers:', error.response?.headers);
+        console.error('[MediaAPI] Request config:', {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers
+        });
       } else {
-        console.error('Upload error:', error);
+        console.error('[MediaAPI] Upload error:', error);
       }
       throw error;
     }
