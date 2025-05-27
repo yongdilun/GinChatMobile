@@ -82,16 +82,23 @@ export function VideoPlayer({ uri, isCompact = false }: VideoPlayerProps) {
       setIsBuffering(status.isBuffering || false);
 
       if (status.didJustFinish) {
+        console.log('[VideoPlayer] Video finished, resetting to beginning');
         setIsPlaying(false);
         setShowControls(true);
         if (controlsTimeoutRef.current) {
           clearTimeout(controlsTimeoutRef.current);
         }
-        // Reset video to beginning when it finishes
-        setTimeout(() => {
+        // Reset video to beginning when it finishes and stop playback
+        setTimeout(async () => {
           const currentVideoRef = isFullscreen ? fullscreenVideoRef.current : videoRef.current;
           if (currentVideoRef) {
-            currentVideoRef.setPositionAsync(0);
+            try {
+              await currentVideoRef.setPositionAsync(0);
+              await currentVideoRef.pauseAsync();
+              console.log('[VideoPlayer] Video reset to beginning and stopped');
+            } catch (error) {
+              console.error('[VideoPlayer] Error resetting video:', error);
+            }
           }
         }, 100);
       }
@@ -113,25 +120,28 @@ export function VideoPlayer({ uri, isCompact = false }: VideoPlayerProps) {
 
     try {
       if (isPlaying) {
+        console.log('[VideoPlayer] Pausing video');
         await currentVideoRef.pauseAsync();
       } else {
         // Check if video has ended (position is at or near the end)
         if (playbackStatus?.isLoaded) {
           const duration = playbackStatus.durationMillis || 0;
           const position = playbackStatus.positionMillis || 0;
-          const isAtEnd = duration > 0 && position >= duration - 1000; // Within 1 second of end
+          const isAtEnd = duration > 0 && position >= duration - 500; // Within 0.5 second of end
 
           if (isAtEnd) {
+            console.log('[VideoPlayer] Video at end, resetting to beginning');
             // Reset to beginning if video has ended
             await currentVideoRef.setPositionAsync(0);
           }
         }
 
+        console.log('[VideoPlayer] Starting video playback');
         await currentVideoRef.playAsync();
       }
       resetControlsTimeout();
     } catch (error) {
-      console.error('Error controlling video playback:', error);
+      console.error('[VideoPlayer] Error controlling video playback:', error);
       setVideoError(true);
     }
   };
