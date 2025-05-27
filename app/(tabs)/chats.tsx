@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Text, Alert, Modal, View, TextInput, StatusBar, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
@@ -154,6 +154,14 @@ export default function ChatsScreen() {
     fetchChatrooms();
   }, []);
 
+  // Refresh chatrooms when screen comes into focus (e.g., after deleting a chatroom)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('[ChatsScreen] Screen focused, refreshing chatrooms');
+      fetchChatrooms();
+    }, [])
+  );
+
   const fetchChatrooms = async () => {
     try {
       setLoading(true);
@@ -260,8 +268,36 @@ export default function ChatsScreen() {
     }
   };
 
-  const handleChatroomPress = (chatroom: Chatroom) => {
-    router.push(`/chat/${chatroom.id}`);
+  const handleChatroomPress = async (chatroom: Chatroom) => {
+    try {
+      // First check if the chatroom still exists before navigating
+      await chatAPI.getConversationById(chatroom.id);
+      router.push(`/chat/${chatroom.id}`);
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.log('[ChatsScreen] Chatroom no longer exists, refreshing list');
+        Alert.alert(
+          'Chatroom Not Found',
+          'This chatroom no longer exists. It may have been deleted.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Remove the deleted chatroom from the list immediately
+                setChatrooms(prevChatrooms =>
+                  prevChatrooms.filter(c => c.id !== chatroom.id)
+                );
+                // Also refresh the full list
+                fetchChatrooms();
+              }
+            }
+          ]
+        );
+      } else {
+        console.error('[ChatsScreen] Error accessing chatroom:', error);
+        Alert.alert('Error', 'Failed to access chatroom. Please try again.');
+      }
+    }
   };
 
   const fetchLastMessage = async (chatroomId: string) => {

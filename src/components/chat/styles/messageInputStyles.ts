@@ -25,14 +25,14 @@ export const messageInputStyles = StyleSheet.create({
     borderRadius: 8,
   },
   videoPreview: {
-    width: '100%',
-    maxWidth: 320,
-    height: 160,
+    width: 250,
+    height: 140,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#000',
     alignSelf: 'center',
     position: 'relative',
+    marginVertical: 8,
   },
   videoPreviewOverlay: {
     position: 'absolute',

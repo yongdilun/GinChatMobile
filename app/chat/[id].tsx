@@ -783,8 +783,11 @@ export default function ChatDetail() {
               await chatAPI.deleteChatroom(chatroomId);
               console.log('[Chat] ✅ Chatroom deleted successfully');
               setShowChatroomActions(false);
+
               // Navigate back to chats list
+              // The chats screen will automatically refresh due to useFocusEffect
               router.back();
+
             } catch (error: any) {
               console.error('[Chat] ❌ Failed to delete chatroom:', error);
               const errorMessage = error.response?.data?.error || error.message || 'Failed to delete chatroom';

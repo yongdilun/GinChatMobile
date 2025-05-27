@@ -70,7 +70,7 @@ export function MessageItem({
               )}
               {item.message_type.includes('audio') && (
                 <View style={messageItemStyles.audioPlayerContainer}>
-                  <AudioPlayer uri={item.media_url!} isCompact={false} />
+                  <AudioPlayer uri={item.media_url!} isCompact={true} />
                 </View>
               )}
             </View>
@@ -134,7 +134,7 @@ export function MessageItem({
               )}
               {item.message_type.includes('audio') && (
                 <View style={messageItemStyles.audioPlayerContainer}>
-                  <AudioPlayer uri={item.media_url!} isCompact={false} />
+                  <AudioPlayer uri={item.media_url!} isCompact={true} />
                 </View>
               )}
             </View>

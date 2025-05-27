@@ -3,14 +3,13 @@ import { GoldTheme } from '../../../../constants/GoldTheme';
 
 export const videoPlayerStyles = StyleSheet.create({
   videoPlayerContainer: {
-    width: '100%',
-    maxWidth: 320,
-    height: 200,
+    width: 250,
+    height: 180,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#000',
     position: 'relative',
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     ...GoldTheme.shadow.dark,
   },
   videoPlayer: {
@@ -183,14 +182,16 @@ export const videoPlayerStyles = StyleSheet.create({
     borderRadius: 2,
   },
   videoPlayerCompact: {
-    width: '100%',
-    height: 160,
-    maxWidth: 320,
+    width: 140,
+    height: 100,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#000',
   },
   videoPlayButtonCompact: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     borderWidth: 2,
     borderColor: 'rgba(255, 215, 0, 0.8)',
