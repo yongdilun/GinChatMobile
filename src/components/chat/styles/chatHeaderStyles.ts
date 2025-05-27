@@ -79,6 +79,7 @@ export const chatHeaderStyles = StyleSheet.create({
     backgroundColor: 'rgba(255, 215, 0, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 0, 0.2)',
+    zIndex: 100, // Ensure header buttons are above other elements
   },
   headerButtonText: {
     fontSize: 12,

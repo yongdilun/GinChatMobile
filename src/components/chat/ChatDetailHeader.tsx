@@ -68,7 +68,10 @@ export function ChatDetailHeader({
           <View style={chatHeaderStyles.headerContent}>
             <TouchableOpacity
               style={chatHeaderStyles.backButtonInHeader}
-              onPress={() => router.back()}
+              onPress={() => {
+                console.log('[Header] Back button pressed');
+                router.back();
+              }}
               activeOpacity={0.7}
             >
               <LinearGradient
@@ -101,7 +104,10 @@ export function ChatDetailHeader({
                 </View>
                 <TouchableOpacity
                   style={chatHeaderStyles.headerButton}
-                  onPress={() => setShowContent(!showContent)}
+                  onPress={() => {
+                    console.log('[Header] Details button pressed, current showContent:', showContent);
+                    setShowContent(!showContent);
+                  }}
                   activeOpacity={0.8}
                 >
                   <Text style={chatHeaderStyles.headerButtonText}>

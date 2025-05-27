@@ -317,7 +317,7 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
 
         {/* Video Controls Overlay */}
         {videoReady && showControls && !isBuffering && (
-          <View style={videoPlayerStyles.videoOverlay}>
+          <View style={videoPlayerStyles.videoOverlay} pointerEvents="box-none">
             <LinearGradient
               colors={['rgba(0, 0, 0, 0.3)', 'transparent', 'rgba(0, 0, 0, 0.7)']}
               style={videoPlayerStyles.videoOverlayGradient}
@@ -325,11 +325,14 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
             />
 
             {/* Top Controls */}
-            <View style={videoPlayerStyles.videoTopControls}>
+            <View style={videoPlayerStyles.videoTopControls} pointerEvents="box-none">
               <View style={videoPlayerStyles.videoTopRightControls}>
                 <TouchableOpacity
                   style={videoPlayerStyles.videoActionButton}
-                  onPress={() => setIsFullscreen(true)}
+                  onPress={() => {
+                    console.log('Expand button pressed');
+                    setIsFullscreen(true);
+                  }}
                   activeOpacity={0.8}
                 >
                   <Ionicons name="expand" size={20} color="#fff" />
@@ -337,7 +340,10 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
 
                 <TouchableOpacity
                   style={videoPlayerStyles.videoActionButton}
-                  onPress={handleDownloadVideo}
+                  onPress={() => {
+                    console.log('Download button pressed');
+                    handleDownloadVideo();
+                  }}
                   disabled={isDownloading}
                   activeOpacity={0.8}
                 >
@@ -351,10 +357,13 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
             </View>
 
             {/* Center controls area - play button */}
-            <View style={videoPlayerStyles.videoCenterControls}>
+            <View style={videoPlayerStyles.videoCenterControls} pointerEvents="box-none">
               <TouchableOpacity
                 style={videoPlayerStyles.videoPlayButton}
-                onPress={handlePlayPause}
+                onPress={() => {
+                  console.log('Play/pause button pressed');
+                  handlePlayPause();
+                }}
                 activeOpacity={0.8}
               >
                 <Ionicons
@@ -366,28 +375,44 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
             </View>
 
             {/* Bottom Controls */}
-            <View style={videoPlayerStyles.videoBottomControls}>
+            <View style={videoPlayerStyles.videoBottomControls} pointerEvents="box-none">
               <Text style={videoPlayerStyles.videoTimeText}>
                 {formatTime(position)} / {formatTime(duration)}
               </Text>
 
               {/* Progress bar */}
               <View style={videoPlayerStyles.videoProgressContainer}>
-                <View style={videoPlayerStyles.videoProgressBar}>
+                <TouchableOpacity
+                  style={videoPlayerStyles.videoProgressBar}
+                  onPress={(event) => {
+                    if (duration > 0) {
+                      const { locationX } = event.nativeEvent;
+                      const progressBarWidth = 256; // Approximate width
+                      const seekRatio = Math.max(0, Math.min(1, locationX / progressBarWidth));
+                      const seekPosition = seekRatio * duration;
+                      console.log('Progress bar pressed:', { locationX, seekRatio, seekPosition });
+                      seekToPosition(seekPosition);
+                    }
+                  }}
+                  activeOpacity={1}
+                >
                   <View
                     style={[
                       videoPlayerStyles.videoProgressFill,
                       { width: `${progress * 100}%` }
                     ]}
                   />
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
 
-            {/* Background touch area for showing/hiding controls */}
+            {/* Background touch area for showing/hiding controls - MOVED TO BOTTOM */}
             <TouchableOpacity
-              style={videoPlayerStyles.videoBackgroundTouch}
-              onPress={handleVideoPress}
+              style={[videoPlayerStyles.videoBackgroundTouch, { zIndex: -1 }]}
+              onPress={() => {
+                console.log('Background touch pressed');
+                handleVideoPress();
+              }}
               activeOpacity={1}
             />
           </View>

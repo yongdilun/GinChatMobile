@@ -46,6 +46,7 @@ export const videoPlayerStyles = StyleSheet.create({
     right: 0,
     bottom: 0,
     justifyContent: 'space-between',
+    zIndex: 1,
   },
   videoOverlayGradient: {
     position: 'absolute',
@@ -75,6 +76,7 @@ export const videoPlayerStyles = StyleSheet.create({
     marginLeft: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    zIndex: 10,
   },
   videoCenterControls: {
     flex: 1,
@@ -90,6 +92,7 @@ export const videoPlayerStyles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.8)',
+    zIndex: 10,
   },
   videoBottomControls: {
     paddingHorizontal: 12,
@@ -168,6 +171,8 @@ export const videoPlayerStyles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 2,
     overflow: 'hidden',
+    paddingVertical: 8, // Increase touch area
+    zIndex: 5,
   },
   videoProgressFill: {
     height: '100%',
