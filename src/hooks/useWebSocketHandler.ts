@@ -28,9 +28,16 @@ export function useWebSocketHandler({
   const { user } = useAuth();
   const { connectToRoom, connectToSidebar, addMessageHandler, removeMessageHandler } = useSimpleWebSocket();
   const processedMessages = useRef(new Set<string>());
+  const isMountedRef = useRef(true);
 
   // WebSocket message handler
   const handleIncomingMessage = useCallback((newMessage: AppWebSocketMessage | WSMessage) => {
+    // Only process messages if component is still mounted and for current room
+    if (!isMountedRef.current) {
+      console.log('[Chat] 🚫 Ignoring message - component unmounted');
+      return;
+    }
+
     console.log('[Chat] Received WebSocket message:', newMessage);
 
     if ('data' in newMessage && newMessage.data && typeof newMessage.data === 'object') {
@@ -181,13 +188,21 @@ export function useWebSocketHandler({
     if (chatroomId && user?.id) {
       console.log('[Chat] 🔌 Connecting to WebSocket room:', chatroomId);
 
+      // Mark component as mounted for this room
+      isMountedRef.current = true;
+
       // Add message handler and connect to room
       addMessageHandler(handleIncomingMessage);
       connectToRoom(chatroomId);
 
       return () => {
         console.log('[Chat] 🔌 Cleaning up WebSocket connection for room:', chatroomId);
+        // Mark component as unmounted to stop processing messages
+        isMountedRef.current = false;
+        // Remove the message handler first to stop processing messages
         removeMessageHandler(handleIncomingMessage);
+        // Clear processed messages for this room
+        processedMessages.current.clear();
         // Reconnect to sidebar when leaving chat room
         connectToSidebar();
       };
