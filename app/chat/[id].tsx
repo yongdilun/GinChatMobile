@@ -259,15 +259,32 @@ export default function ChatDetail() {
     loadChatroomData();
   }, [chatroomId, token]);
 
-  // Focus effect to mark messages as read when returning to chat
+  // Focus effect to mark messages as read when actively viewing chat
   useFocusEffect(
     useCallback(() => {
-      if (chatroomId && token) {
-        setTimeout(() => {
+      if (!chatroomId || !token) return;
+
+      let timeoutId: ReturnType<typeof setTimeout>;
+      let isStillFocused = true;
+
+      // Only mark as read if user stays on screen for at least 2 seconds
+      // This prevents auto-marking when just passing through or navigating
+      timeoutId = setTimeout(() => {
+        if (isStillFocused) {
+          console.log('[Chat] 📝 User actively viewing chat, marking messages as read');
           markAllMessagesAsRead();
-        }, 300);
-      }
-    }, [chatroomId, token])
+        }
+      }, 2000); // Increased delay to 2 seconds
+
+      // Cleanup function - called when screen loses focus
+      return () => {
+        isStillFocused = false;
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          console.log('[Chat] 📝 Screen lost focus, cancelled auto-mark as read');
+        }
+      };
+    }, [chatroomId, token, markAllMessagesAsRead])
   );
 
   // Send message function
@@ -285,8 +302,8 @@ export default function ChatDetail() {
         try {
           const uploadResult = await mediaAPI.uploadMedia({
             uri: selectedMedia.uri,
-            type: selectedMedia.mimeType,
-            name: selectedMedia.name,
+            type: selectedMedia.mimeType || 'image/jpeg',
+            name: selectedMedia.name || 'media',
           }, selectedMedia.backendType || 'picture');
           mediaUrl = uploadResult.media_url;
           messageType = selectedMedia.backendType as MessageType || 'picture';
