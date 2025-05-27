@@ -27,7 +27,7 @@ class SimpleWebSocketService {
   private isConnecting: boolean = false;
   private isManualDisconnect: boolean = false;
 
-  // Simple connection method - no delays, no throttling
+  // Simple connection method - with proper connection management
   public connect(roomId: string, token: string, options?: WebSocketServiceOptions): void {
     if (!roomId || !token) {
       console.error("[SimpleWebSocketService] Room ID and token are required");
@@ -41,10 +41,15 @@ class SimpleWebSocketService {
       return;
     }
 
-    // If connecting to a different room, disconnect first
+    // If connecting to a different room, disconnect first and wait
     if (this.ws && this.currentRoomId !== roomId) {
       console.log("[SimpleWebSocketService] Switching from", this.currentRoomId, "to", roomId);
       this.disconnect();
+      // Wait a bit before connecting to new room to avoid 429 errors
+      setTimeout(() => {
+        this.connectToRoom(roomId, token, options);
+      }, 1000);
+      return;
     }
 
     // Prevent multiple simultaneous connections
@@ -53,6 +58,10 @@ class SimpleWebSocketService {
       return;
     }
 
+    this.connectToRoom(roomId, token, options);
+  }
+
+  private connectToRoom(roomId: string, token: string, options?: WebSocketServiceOptions): void {
     this.isConnecting = true;
     this.isManualDisconnect = false;
     this.currentRoomId = roomId;
@@ -108,12 +117,12 @@ class SimpleWebSocketService {
 
         // Simple reconnection: only if not manual disconnect and connection was stable
         if (!this.isManualDisconnect && event.code !== 1000 && this.currentRoomId && this.currentToken) {
-          console.log("[SimpleWebSocketService] 🔄 Reconnecting in 2 seconds...");
+          console.log("[SimpleWebSocketService] 🔄 Reconnecting in 3 seconds...");
           setTimeout(() => {
             if (!this.isManualDisconnect && this.currentRoomId && this.currentToken) {
-              this.connect(this.currentRoomId, this.currentToken, options);
+              this.connectToRoom(this.currentRoomId, this.currentToken, options);
             }
-          }, 2000);
+          }, 3000);
         }
       };
 
