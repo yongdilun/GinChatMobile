@@ -18,12 +18,18 @@ interface UseWebSocketHandlerProps {
   chatroomId: string | null;
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   markMessageAsRead: (messageId: string) => Promise<void>;
+  addNewMessage?: (message: Message) => void;
+  updateMessage?: (messageId: string, updates: Partial<Message>) => void;
+  removeMessage?: (messageId: string) => void;
 }
 
 export function useWebSocketHandler({
   chatroomId,
   setMessages,
-  markMessageAsRead
+  markMessageAsRead,
+  addNewMessage,
+  updateMessage,
+  removeMessage
 }: UseWebSocketHandlerProps) {
   const { user } = useAuth();
   const { connectToRoom, connectToSidebar, addMessageHandler, removeMessageHandler } = useSimpleWebSocket();
@@ -48,19 +54,31 @@ export function useWebSocketHandler({
         const updatedMessage = newMessage.data as Message;
         console.log('[Chat] Message updated:', updatedMessage);
 
-        setMessages(prevMessages =>
-          prevMessages.map(msg =>
-            msg.id === updatedMessage.id ? { ...updatedMessage, edited: true } : msg
-          )
-        );
+        if (updateMessage) {
+          // Use the hook function if available
+          updateMessage(updatedMessage.id, { ...updatedMessage, edited: true });
+        } else {
+          // Fallback to direct state update
+          setMessages(prevMessages =>
+            prevMessages.map(msg =>
+              msg.id === updatedMessage.id ? { ...updatedMessage, edited: true } : msg
+            )
+          );
+        }
       } else if (messageType === 'message_deleted') {
         // Handle message deletion
         const { message_id } = newMessage.data as { message_id: string; chatroom_id: string };
         console.log('[Chat] Message deleted:', message_id);
 
-        setMessages(prevMessages =>
-          prevMessages.filter(msg => msg.id !== message_id)
-        );
+        if (removeMessage) {
+          // Use the hook function if available
+          removeMessage(message_id);
+        } else {
+          // Fallback to direct state update
+          setMessages(prevMessages =>
+            prevMessages.filter(msg => msg.id !== message_id)
+          );
+        }
       } else if (messageType === 'chatroom_deleted') {
         // Handle chatroom deletion
         const { chatroom_id } = newMessage.data as { chatroom_id: string };
@@ -92,23 +110,29 @@ export function useWebSocketHandler({
             console.log('[Chat] 📝 Processing read status update for message:', readData.message_id, '(reader:', readData.user_id, ')');
             console.log('[Chat] 📝 New read status data:', readData.read_status);
 
-            setMessages(prevMessages => {
-              const updatedMessages = prevMessages.map(msg => {
-                if (msg.id === readData.message_id) {
-                  const updatedMsg = { ...msg, read_status: readData.read_status };
-                  console.log('[Chat] 📝 Updated message read status:', {
-                    messageId: msg.id,
-                    oldReadStatus: msg.read_status,
-                    newReadStatus: readData.read_status
-                  });
-                  return updatedMsg;
-                }
-                return msg;
-              });
+            if (updateMessage) {
+              // Use the hook function if available
+              updateMessage(readData.message_id, { read_status: readData.read_status });
+            } else {
+              // Fallback to direct state update
+              setMessages(prevMessages => {
+                const updatedMessages = prevMessages.map(msg => {
+                  if (msg.id === readData.message_id) {
+                    const updatedMsg = { ...msg, read_status: readData.read_status };
+                    console.log('[Chat] 📝 Updated message read status:', {
+                      messageId: msg.id,
+                      oldReadStatus: msg.read_status,
+                      newReadStatus: readData.read_status
+                    });
+                    return updatedMsg;
+                  }
+                  return msg;
+                });
 
-              console.log('[Chat] 📝 Messages state updated with new read status');
-              return updatedMessages;
-            });
+                console.log('[Chat] 📝 Messages state updated with new read status');
+                return updatedMessages;
+              });
+            }
           }
 
           // Handle bulk read status update (when user marks all as read)
@@ -163,15 +187,20 @@ export function useWebSocketHandler({
         if (messageData.id && !processedMessages.current.has(messageData.id)) {
           processedMessages.current.add(messageData.id);
 
-          // Add message to UI immediately
-          setMessages(prevMessages => {
-            const messageExists = prevMessages.some(msg => msg.id === messageData.id);
-            if (!messageExists) {
-              const updatedMessages = [messageData, ...prevMessages];
-              return updatedMessages.sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
-            }
-            return prevMessages;
-          });
+          if (addNewMessage) {
+            // Use the hook function if available (preferred for paginated messages)
+            addNewMessage(messageData);
+          } else {
+            // Fallback to direct state update
+            setMessages(prevMessages => {
+              const messageExists = prevMessages.some(msg => msg.id === messageData.id);
+              if (!messageExists) {
+                const updatedMessages = [messageData, ...prevMessages];
+                return updatedMessages.sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
+              }
+              return prevMessages;
+            });
+          }
 
           // Auto-mark new messages as read if from others
           if (messageData.sender_id !== user?.id && messageData.id) {
@@ -181,7 +210,7 @@ export function useWebSocketHandler({
         }
       }
     }
-  }, [chatroomId, user?.id, setMessages, markMessageAsRead]);
+  }, [chatroomId, user?.id, setMessages, markMessageAsRead, addNewMessage, updateMessage, removeMessage]);
 
   // Connect to chat room WebSocket
   useEffect(() => {

@@ -183,6 +183,9 @@ export default function ChatDetail() {
     chatroomId,
     setMessages: setMessagesForWebSocket,
     markMessageAsRead,
+    addNewMessage,
+    updateMessage,
+    removeMessage,
   });
 
   // Mark all messages as read
@@ -593,8 +596,15 @@ export default function ChatDetail() {
           data={messagesWithDivider}
           renderItem={renderItem}
           keyExtractor={(item, index) => {
-            // Use stable key - include item ID (either message ID or divider ID)
-            return item.id || `item_${index}`;
+            // Use stable key with type prefix to avoid duplicates
+            if (item.type === 'message') {
+              return `msg_${item.id || index}`;
+            } else if (item.type === 'fixed_unread_divider') {
+              return `fixed_divider_${item.id || index}`;
+            } else if (item.type === 'unread_divider') {
+              return `divider_${item.id || index}`;
+            }
+            return `item_${index}`;
           }}
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContent}
