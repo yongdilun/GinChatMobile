@@ -72,6 +72,9 @@ export default function ChatDetail() {
   const [showChatroomActions, setShowChatroomActions] = useState(false);
   const [showUnreadIndicator, setShowUnreadIndicator] = useState(true);
 
+  // Ref to track if we've already marked messages as read for this session
+  const hasMarkedAsReadRef = useRef(false);
+
   // Media picker hook
   const {
     selectedMedia,
@@ -241,10 +244,8 @@ export default function ChatDetail() {
 
       setMessages(sortedMessages);
 
-      // Mark all messages as read when entering chat
-      setTimeout(() => {
-        markAllMessagesAsRead();
-      }, 500);
+      // Note: Messages will be marked as read by the useFocusEffect
+      // when user actively views the chat for 2+ seconds
 
     } catch (error) {
       console.error('[Chat] Error loading chatroom data:', error);
@@ -256,6 +257,8 @@ export default function ChatDetail() {
 
   // Load data on mount and when chatroomId changes
   useEffect(() => {
+    // Reset the mark-as-read flag when entering a new chatroom
+    hasMarkedAsReadRef.current = false;
     loadChatroomData();
   }, [chatroomId, token]);
 
@@ -268,9 +271,10 @@ export default function ChatDetail() {
       let isStillFocused = true;
 
       // Only mark as read if user stays on screen for at least 2 seconds
-      // This prevents auto-marking when just passing through or navigating
+      // AND we haven't already marked messages as read for this session
       timeoutId = setTimeout(() => {
-        if (isStillFocused) {
+        if (isStillFocused && !hasMarkedAsReadRef.current) {
+          hasMarkedAsReadRef.current = true;
           console.log('[Chat] 📝 User actively viewing chat, marking messages as read');
           markAllMessagesAsRead();
         }
@@ -284,7 +288,7 @@ export default function ChatDetail() {
           console.log('[Chat] 📝 Screen lost focus, cancelled auto-mark as read');
         }
       };
-    }, [chatroomId, token, markAllMessagesAsRead])
+    }, [chatroomId, token]) // Removed markAllMessagesAsRead from dependencies
   );
 
   // Send message function
