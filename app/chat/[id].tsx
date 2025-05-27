@@ -305,19 +305,30 @@ export default function ChatDetail() {
     };
   }, [chatroomId, token]); // Removed user?.id and markAllMessagesAsRead to prevent infinite loop
 
-  // Manage unread indicator visibility based on messages
+  // Manage unread indicator visibility based on messages and pagination state
   useEffect(() => {
     if (messages.length === 0) {
       setShowUnreadIndicator(false);
-    } else {
-      // Only show if there are actually unread messages
-      const hasUnreadMessages = messages.some(msg =>
-        msg.sender_id !== user?.id &&
-        !msg.read_status?.find(status => status.user_id === user?.id && status.is_read)
-      );
-      setShowUnreadIndicator(hasUnreadMessages);
+      return;
     }
-  }, [messages, user?.id]);
+
+    // Check if there are actually unread messages
+    const hasUnreadMessages = messages.some(msg =>
+      msg.sender_id !== user?.id &&
+      !msg.read_status?.find(status => status.user_id === user?.id && status.is_read)
+    );
+
+    // Hide indicator if:
+    // 1. No unread messages exist
+    // 2. All messages have been loaded (!hasMore) - meaning we've reached the beginning
+    if (!hasUnreadMessages || !hasMore) {
+      console.log('[Chat] Hiding unread indicator:', { hasUnreadMessages, hasMore });
+      setShowUnreadIndicator(false);
+    } else {
+      console.log('[Chat] Showing unread indicator:', { hasUnreadMessages, hasMore });
+      setShowUnreadIndicator(true);
+    }
+  }, [messages, user?.id, hasMore]);
 
   // Send message function
   const sendMessage = async () => {
@@ -640,6 +651,10 @@ export default function ChatDetail() {
             if (hasMore && !loadingMore) {
               console.log('[Chat] 📄 Loading more older messages...');
               loadMoreMessages();
+            } else if (!hasMore) {
+              // User reached the beginning of conversation, hide unread indicator
+              console.log('[Chat] 📍 User reached beginning of conversation via onEndReached, hiding unread indicator');
+              setShowUnreadIndicator(false);
             }
           }}
           onScrollToIndexFailed={(info) => {
@@ -680,6 +695,7 @@ export default function ChatDetail() {
             currentUserId={user.id}
             onScrollToUnread={handleScrollToUnread}
             isVisible={showUnreadIndicator}
+            hasMore={hasMore}
           />
         )}
       </LinearGradient>

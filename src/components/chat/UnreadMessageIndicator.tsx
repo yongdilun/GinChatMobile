@@ -27,18 +27,20 @@ interface UnreadMessageIndicatorProps {
   currentUserId: number;
   onScrollToUnread: (messageIndex: number) => void;
   isVisible: boolean;
+  hasMore?: boolean; // Add pagination state awareness
 }
 
 export function UnreadMessageIndicator({
   messages,
   currentUserId,
   onScrollToUnread,
-  isVisible
+  isVisible,
+  hasMore = true
 }: UnreadMessageIndicatorProps) {
   // Find the oldest unread message (static calculation, not affected by real-time updates)
   const oldestUnreadInfo = useMemo(() => {
-    // Don't show if no messages, not visible, or messages array is empty
-    if (!messages || messages.length === 0 || !isVisible) return null;
+    // Don't show if no messages, not visible, messages array is empty, or all messages loaded
+    if (!messages || messages.length === 0 || !isVisible || !hasMore) return null;
 
     // Sort messages by sent_at (oldest first for this calculation)
     const sortedMessages = [...messages].sort((a, b) =>
@@ -77,10 +79,10 @@ export function UnreadMessageIndicator({
     }
 
     return null;
-  }, [messages, currentUserId, isVisible]);
+  }, [messages, currentUserId, isVisible, hasMore]);
 
-  // Don't show if no unread messages, not visible, or no messages at all
-  if (!oldestUnreadInfo || !isVisible || !messages || messages.length === 0) {
+  // Don't show if no unread messages, not visible, no messages at all, or all messages loaded
+  if (!oldestUnreadInfo || !isVisible || !messages || messages.length === 0 || !hasMore) {
     return null;
   }
 
