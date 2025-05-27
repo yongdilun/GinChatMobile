@@ -147,19 +147,9 @@ export default function ChatsScreen() {
 
       const response = await chatAPI.getConversations();
 
-      // Preserve existing unread counts when updating chatrooms
-      setChatrooms(prevChatrooms => {
-        const newChatrooms = response.chatrooms || [];
-        return newChatrooms.map(newChatroom => {
-          // Find existing chatroom to preserve unread count
-          const existingChatroom = prevChatrooms.find(prev => prev.id === newChatroom.id);
-          return {
-            ...newChatroom,
-            // Preserve unread count if it exists
-            unread_count: existingChatroom?.unread_count || 0
-          };
-        });
-      });
+      // Use fresh data from API, don't preserve old unread counts
+      // WebSocket updates will handle real-time unread count changes
+      setChatrooms(response.chatrooms || []);
 
     } catch (err) {
       console.error('Error fetching chatrooms:', err);

@@ -244,6 +244,11 @@ export default function ChatDetail() {
 
       setMessages(sortedMessages);
 
+      // Calculate static unread info only on initial load (not affected by WebSocket updates)
+      const unreadInfo = calculateUnreadInfo(sortedMessages);
+      setStaticUnreadInfo(unreadInfo);
+      console.log('[Chat] 📍 Static unread info calculated:', unreadInfo);
+
       // Note: Messages will be marked as read by the room entry useEffect
       // after a 1.5 second delay to ensure messages are loaded
 
@@ -259,6 +264,8 @@ export default function ChatDetail() {
   useEffect(() => {
     // Reset the mark-as-read flag when entering a new chatroom
     hasMarkedAsReadRef.current = false;
+    // Reset static unread info when entering new chatroom
+    setStaticUnreadInfo(null);
     loadChatroomData();
   }, [chatroomId, token]);
 
@@ -384,12 +391,19 @@ export default function ChatDetail() {
     return colors[index];
   };
 
-  // Calculate oldest unread message position (static, only updates when messages change)
-  const oldestUnreadInfo = useMemo(() => {
-    if (!messages || messages.length === 0 || !user?.id) return null;
+  // Static unread message info - only calculated on room entry, not affected by WebSocket updates
+  const [staticUnreadInfo, setStaticUnreadInfo] = useState<{
+    messageId: string;
+    originalIndex: number;
+    unreadCount: number;
+  } | null>(null);
+
+  // Calculate unread info only when initially loading messages (not on WebSocket updates)
+  const calculateUnreadInfo = useCallback((messageList: Message[]) => {
+    if (!messageList || messageList.length === 0 || !user?.id) return null;
 
     // Sort messages by sent_at (oldest first for this calculation)
-    const sortedMessages = [...messages].sort((a, b) =>
+    const sortedMessages = [...messageList].sort((a, b) =>
       new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
     );
 
@@ -408,7 +422,7 @@ export default function ChatDetail() {
       if (!userReadStatus) {
         // Found the oldest unread message
         // Find its index in the original messages array (which is sorted newest first)
-        const originalIndex = messages.findIndex(m => m.id === message.id);
+        const originalIndex = messageList.findIndex(m => m.id === message.id);
 
         // Count total unread messages
         const unreadCount = sortedMessages.slice(i).filter(m => {
@@ -428,7 +442,7 @@ export default function ChatDetail() {
     }
 
     return null;
-  }, [messages, user?.id]);
+  }, [user?.id]);
 
   // Memoize read status calculations to prevent unnecessary recalculations
   const readStatusCache = useMemo(() => {
@@ -471,7 +485,7 @@ export default function ChatDetail() {
 
   // Create combined data structure with messages and unread divider
   const messagesWithDivider = useMemo(() => {
-    if (!oldestUnreadInfo) {
+    if (!staticUnreadInfo) {
       // No unread messages, return original messages with proper structure
       return messages.map((msg, index) => ({
         type: 'message',
@@ -486,11 +500,11 @@ export default function ChatDetail() {
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
 
-      // Insert divider before the oldest unread message
-      if (!dividerInserted && message.id === oldestUnreadInfo.messageId) {
+      // Insert divider ABOVE (before) the oldest unread message
+      if (!dividerInserted && message.id === staticUnreadInfo.messageId) {
         result.push({
           type: 'unread_divider',
-          data: { unreadCount: oldestUnreadInfo.unreadCount },
+          data: { unreadCount: staticUnreadInfo.unreadCount },
           id: `unread_divider_${message.id || i}` // Ensure unique ID
         });
         dividerInserted = true;
@@ -504,7 +518,7 @@ export default function ChatDetail() {
     }
 
     return result;
-  }, [messages, oldestUnreadInfo]);
+  }, [messages, staticUnreadInfo]);
 
   // Get read status for messages (now uses cache)
   const getReadStatus = useCallback((message: Message) => {
