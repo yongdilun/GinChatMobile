@@ -105,35 +105,25 @@ export default function ChatsScreen() {
     }
   }, []);
 
-  // Connect to sidebar WebSocket when component mounts (with debouncing)
+  // Connect to sidebar WebSocket when component mounts
   useEffect(() => {
     console.log('[ChatsScreen] Component mounted, setting up sidebar WebSocket');
     console.log('[ChatsScreen] Current connection state - isConnected:', isConnected, 'currentRoomId:', currentRoomId);
 
-    // SIMPLIFIED: Connect to sidebar immediately
-    if (currentRoomId !== 'global_sidebar') {
-      console.log('[ChatsScreen] 🔌 Connecting to sidebar for global updates');
-      addMessageHandler(handleWebSocketMessage);
-      connectToSidebar();
-
-      return () => {
-        console.log('[ChatsScreen] 🔌 Component unmounting, cleaning up WebSocket');
-        removeMessageHandler(handleWebSocketMessage);
-        disconnectFromSidebar();
-      };
-    } else {
-      console.log('[ChatsScreen] Already connected to sidebar, skipping connection');
-    }
+    // Always try to connect to sidebar - the service will queue if needed
+    console.log('[ChatsScreen] 🔌 Requesting sidebar connection');
+    addMessageHandler(handleWebSocketMessage);
+    connectToSidebar();
 
     return () => {
-      console.log('[ChatsScreen] Component unmounting, cleaning up WebSocket');
+      console.log('[ChatsScreen] 🔌 Component unmounting, cleaning up WebSocket');
       removeMessageHandler(handleWebSocketMessage);
-      // Don't disconnect if we're connected to a chat room
-      if (currentRoomId && currentRoomId === 'global_sidebar') {
+      // Only disconnect if we're actually connected to sidebar
+      if (currentRoomId === 'global_sidebar') {
         disconnectFromSidebar();
       }
     };
-  }, [connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, handleWebSocketMessage, currentRoomId]);
+  }, [connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, handleWebSocketMessage]);
 
   useEffect(() => {
     fetchChatrooms();

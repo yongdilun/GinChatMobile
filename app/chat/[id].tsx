@@ -1991,7 +1991,7 @@ export default function ChatDetailScreen() {
   const {
     connectToRoom,
     disconnectFromRoom,
-    connectToSidebar,
+    switchToSidebar,
     addMessageHandler,
     removeMessageHandler,
   } = useSimpleWebSocket();
@@ -2168,16 +2168,11 @@ export default function ChatDetailScreen() {
       return () => {
         console.log('[Chat] 🔌 Cleaning up WebSocket connection for room:', chatroomId);
         removeMessageHandler(handleIncomingMessage);
-        // Disconnect from chat room and reconnect to sidebar
-        disconnectFromRoom();
-        // Reconnect to sidebar after a short delay to avoid connection conflicts
-        setTimeout(() => {
-          console.log('[Chat] 🔌 Reconnecting to sidebar after leaving chat room');
-          connectToSidebar();
-        }, 1000);
+        // Switch back to sidebar when leaving chat room
+        switchToSidebar();
       };
     }
-  }, [chatroomId, user?.id, connectToRoom, disconnectFromRoom, connectToSidebar, addMessageHandler, removeMessageHandler, handleIncomingMessage]); // SIMPLIFIED: Minimal dependencies
+  }, [chatroomId, user?.id, connectToRoom, switchToSidebar, addMessageHandler, removeMessageHandler, handleIncomingMessage]); // SIMPLIFIED: Minimal dependencies
 
   const fetchChatroom = async () => {
     if (!chatroomId) return;
