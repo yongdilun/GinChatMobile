@@ -57,12 +57,20 @@ GinChat Mobile is a premium messaging application that provides a luxurious chat
 - **Production Ready**: Deployed and connected to live backend infrastructure
 - **Navigation Protection**: Spam-prevention with debounced navigation and visual feedback
 - **Consistent UI**: Stable gradient colors and enhanced message previews with usernames
+- **Smart Chat Sorting**: Automatic sorting by latest message with real-time reordering
+- **Advanced Edit Features**: Complete media editing with original content display and replacement options
 
 ---
 
 ## 🆕 Recent Updates & Improvements
 
-### Navigation Spam Prevention (Latest)
+### Chat List Improvements (Latest)
+- **Smart Sorting**: Chat list automatically sorted by latest message timestamp with most recent conversations at the top
+- **Real-time Reordering**: When new messages arrive via WebSocket, chats automatically move to the top of the list
+- **Consistent Sorting**: Maintains proper order across app restarts, refreshes, and real-time updates
+- **Performance Optimized**: Efficient sorting algorithm that doesn't impact UI responsiveness
+
+### Navigation Spam Prevention
 - **Debounced Navigation**: Prevents multiple chat pages from opening when users rapidly tap chat items
 - **Visual Feedback**: Chat items show disabled state during navigation with 60% opacity
 - **2-Second Cooldown**: Prevents rapid navigation attempts with proper timeout management
@@ -86,6 +94,14 @@ GinChat Mobile is a premium messaging application that provides a luxurious chat
 - **Cleaner Layout**: Better space utilization in media gallery headers
 - **Touch Targets**: Optimized button sizes for better mobile interaction
 
+### Enhanced Edit Message Functionality
+- **Original Media Display**: Edit modal shows existing media (image/video/audio) when editing messages with attachments
+- **Media Replacement**: Users can replace existing media by selecting new files through integrated media picker
+- **Simplified Preview**: Media preview shows clean file names with appropriate icons instead of complex URLs
+- **Remove Media Option**: X button allows users to remove existing media without replacement
+- **Upload Progress**: Real-time upload progress indication with loading states and error handling
+- **Consistent UI**: Edit interface matches message composition UI for familiar user experience
+
 ### WebSocket Architecture
 - **SimpleWebSocket Implementation**: Migrated from complex WebSocketService to streamlined SimpleWebSocket
 - **Better Connection Management**: Improved room switching with graceful disconnection
@@ -98,12 +114,15 @@ GinChat Mobile is a premium messaging application that provides a luxurious chat
 
 ### 💬 **Core Messaging**
 - **Real-time Chat**: Instant messaging with optimized WebSocket technology
+- **Smart Chat List**: Automatically sorted by latest message timestamp with real-time reordering
 - **Group Conversations**: Create and join chat rooms with room codes and passwords
 - **Rich Message Types**: Support for text, images, audio, video, and combined media
 - **Message Status**: Advanced delivery and read indicators with blue ticks
+- **Enhanced Message Editing**: Edit text and replace/remove media with intuitive UI
 - **Media Gallery**: Browse shared media with full-screen viewers and download options
 - **Audio Messages**: Professional audio player with waveform visualization
 - **Video Support**: Inline video playback with controls and download functionality
+- **Username Context**: Message previews show sender names for better conversation context
 
 ### 🔐 **Authentication & Security**
 - **Secure Login**: JWT token-based authentication with automatic refresh
@@ -115,11 +134,14 @@ GinChat Mobile is a premium messaging application that provides a luxurious chat
 
 ### 🎨 **Premium UI/UX**
 - **Gold Theme**: Luxurious gold-themed design system with dynamic gradients
+- **Consistent Gradients**: Stable group icon colors that remain the same across app sessions
+- **Smart Chat Ordering**: Most recent conversations automatically appear at the top
 - **Adaptive Components**: Responsive design components for all screen sizes
 - **Smooth Animations**: Beautiful transitions, loading states, and micro-interactions
 - **Professional Design**: WhatsApp-inspired interface with premium aesthetics
 - **Custom Components**: Reusable UI elements (GoldButton, GoldInput, AudioPlayer)
 - **Visual Feedback**: Loading spinners, progress bars, and status indicators
+- **Navigation Protection**: Prevents accidental multiple page opens with visual feedback
 
 ### 📱 **Mobile Experience**
 - **Cross-Platform**: Native iOS, Android, and web support with Expo
@@ -269,16 +291,23 @@ npm run start-host
 // Component Hierarchy
 App
 ├── AuthProvider
-│   ├── WebSocketProvider
+│   ├── SimpleWebSocketProvider (Updated)
 │   │   ├── ProtectedRoute
 │   │   │   ├── Navigation (Expo Router)
 │   │   │   │   ├── AuthPages (/, /login, /signup)
 │   │   │   │   └── ProtectedPages
 │   │   │   │       ├── TabNavigation
-│   │   │   │       │   └── ChatsScreen
+│   │   │   │       │   └── ChatsScreen (with smart sorting)
 │   │   │   │       └── ChatScreens
-│   │   │   │           └── ChatDetailScreen
+│   │   │   │           └── ChatDetailScreen (enhanced editing)
 ```
+
+### 🔄 **Recent Architecture Improvements**
+- **SimpleWebSocket Migration**: Streamlined WebSocket implementation for better performance
+- **Smart Sorting Logic**: Efficient chat list sorting with real-time updates
+- **Enhanced Edit Components**: Improved MessageActions with media handling
+- **Navigation Debouncing**: Spam prevention with proper state management
+- **Consistent State Management**: Unified approach to chat ordering and updates
 
 ---
 

@@ -453,9 +453,10 @@ export const mediaAPI = {
 export const chatAPI = {
   getConversations: async (): Promise<{ chatrooms: Chatroom[] }> => {
     try {
-      console.log('[API] Fetching user\'s joined chatrooms...');
-      const response = await api.get('/chatrooms/user');
-      console.log('[API] Successfully fetched user chatrooms:', response.data);
+      console.log('[API] Fetching user\'s joined chatrooms with backend sorting...');
+      // Use optimized backend sorting with ?sorted=true parameter
+      const response = await api.get('/chatrooms/user?sorted=true');
+      console.log('[API] Successfully fetched sorted user chatrooms:', response.data);
 
       // Fetch unread counts separately and merge them
       try {
@@ -463,7 +464,7 @@ export const chatAPI = {
         const unreadResponse = await api.get('/messages/unread-counts');
         console.log('[API] Successfully fetched unread counts:', unreadResponse.data);
 
-        // Merge unread counts with chatrooms
+        // Merge unread counts with chatrooms (already sorted by backend)
         const chatrooms = response.data.chatrooms || [];
         const unreadCounts = unreadResponse.data || [];
 
@@ -475,7 +476,7 @@ export const chatAPI = {
           };
         });
 
-        console.log('[API] Merged chatrooms with unread counts');
+        console.log('[API] Merged chatrooms with unread counts (backend sorted)');
         return { chatrooms: chatroomsWithUnreadCounts };
       } catch (unreadError) {
         console.error('[API] Failed to fetch unread counts, using chatrooms without unread counts:', unreadError);

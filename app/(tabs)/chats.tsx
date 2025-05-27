@@ -77,8 +77,13 @@ export default function ChatsScreen() {
               return chatroom;
             });
 
-            // Re-sort by latest message timestamp after updating
-            return sortChatroomsByLatestMessage(updatedChatrooms);
+            // Note: For real-time updates, we still need to re-sort since WebSocket
+            // updates don't come from the optimized backend endpoint
+            return updatedChatrooms.sort((a, b) => {
+              const aTime = a.last_message?.timestamp ? new Date(a.last_message.timestamp).getTime() : 0;
+              const bTime = b.last_message?.timestamp ? new Date(b.last_message.timestamp).getTime() : 0;
+              return bTime - aTime; // Descending order (newest first)
+            });
           });
         }
         break;
@@ -179,14 +184,8 @@ export default function ChatsScreen() {
     };
   }, []);
 
-  // Helper function to sort chatrooms by latest message timestamp
-  const sortChatroomsByLatestMessage = (chatrooms: Chatroom[]) => {
-    return chatrooms.sort((a, b) => {
-      const aTime = a.last_message?.timestamp ? new Date(a.last_message.timestamp).getTime() : 0;
-      const bTime = b.last_message?.timestamp ? new Date(b.last_message.timestamp).getTime() : 0;
-      return bTime - aTime; // Descending order (newest first)
-    });
-  };
+  // Note: Sorting is now handled by backend for better performance
+  // Frontend sorting has been removed in favor of optimized database sorting
 
   const fetchChatrooms = async () => {
     try {
@@ -204,11 +203,9 @@ export default function ChatsScreen() {
         });
       }
 
-      // Sort chatrooms by latest message timestamp (most recent first)
-      const sortedChatrooms = sortChatroomsByLatestMessage(response.chatrooms || []);
-
-      console.log('[ChatsScreen] Sorted chatrooms by latest message timestamp');
-      setChatrooms(sortedChatrooms);
+      // Chatrooms are already sorted by backend - no frontend sorting needed
+      console.log('[ChatsScreen] Received pre-sorted chatrooms from backend');
+      setChatrooms(response.chatrooms || []);
 
     } catch (err) {
       console.error('Error fetching chatrooms:', err);
@@ -365,54 +362,9 @@ export default function ChatsScreen() {
     }
   };
 
-  const fetchLastMessage = async (chatroomId: string) => {
-    try {
-      const response = await chatAPI.getMessages(chatroomId, 1, 1);
-      if (response.messages && response.messages.length > 0) {
-        const message = response.messages[0];
-        return {
-          content: message.text_content || (message.media_url ? `[${message.message_type.replace('_', ' ')}]` : 'Empty message'),
-          timestamp: message.sent_at,
-          sender_id: message.sender_id,
-          sender_name: message.sender_name
-        };
-      }
-      return null;
-    } catch (error) {
-      console.error('Error fetching last message:', error);
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    const updateChatroomsWithLastMessages = async () => {
-      if (chatrooms.length === 0) return;
-
-      const updatedChatrooms = [...chatrooms];
-      let hasUpdates = false;
-
-      for (let i = 0; i < updatedChatrooms.length; i++) {
-        if (!updatedChatrooms[i].last_message) {
-          const lastMessage = await fetchLastMessage(updatedChatrooms[i].id);
-          if (lastMessage) {
-            updatedChatrooms[i] = {
-              ...updatedChatrooms[i],
-              last_message: lastMessage
-            };
-            hasUpdates = true;
-          }
-        }
-      }
-
-      if (hasUpdates) {
-        // Sort by latest message timestamp after updating last messages
-        const sortedChatrooms = sortChatroomsByLatestMessage(updatedChatrooms);
-        setChatrooms(sortedChatrooms);
-      }
-    };
-
-    updateChatroomsWithLastMessages();
-  }, [chatrooms]);
+  // Note: fetchLastMessage and updateChatroomsWithLastMessages have been removed
+  // Backend now provides latest messages directly in the sorted chatrooms response
+  // This eliminates N+1 query problem and improves performance significantly
 
   const getGoldGradient = (name: string) => {
     // More consistent gold-themed gradients
