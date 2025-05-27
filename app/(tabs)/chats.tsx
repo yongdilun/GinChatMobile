@@ -83,10 +83,12 @@ export default function ChatsScreen() {
             const updatedChatrooms = prevChatrooms.map(chatroom => {
               const updateData = message.data.find((item: any) => item.chatroom_id === chatroom.id);
               if (updateData) {
-                console.log(`[ChatsScreen] Updating unread count for ${chatroom.name}: ${updateData.unread_count}`);
+                const oldCount = chatroom.unread_count || 0;
+                const newCount = updateData.unread_count || 0;
+                console.log(`[ChatsScreen] Updating unread count for ${chatroom.name}: ${oldCount} → ${newCount}`);
                 return {
                   ...chatroom,
-                  unread_count: updateData.unread_count || 0
+                  unread_count: newCount
                 };
               }
               return chatroom;
@@ -146,6 +148,15 @@ export default function ChatsScreen() {
       setError(null);
 
       const response = await chatAPI.getConversations();
+
+      // Debug: Log unread counts from API
+      if (response.chatrooms) {
+        response.chatrooms.forEach(chatroom => {
+          if (chatroom.unread_count && chatroom.unread_count > 0) {
+            console.log(`[ChatsScreen] API returned unread count for ${chatroom.name}: ${chatroom.unread_count}`);
+          }
+        });
+      }
 
       // Use fresh data from API, don't preserve old unread counts
       // WebSocket updates will handle real-time unread count changes
