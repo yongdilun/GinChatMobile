@@ -1997,8 +1997,65 @@ export default function ChatDetailScreen() {
 
   const chatroomId = typeof chatroomIdFromParams === 'string' ? chatroomIdFromParams : null;
 
-  // WebSocket message handler
-    const handleIncomingMessage = (newMessage: AppWebSocketMessage | WSMessage) => {
+  // OPTIMISTIC: Mark a specific message as read (copy web implementation exactly) - FIXED: Use useCallback
+  const markMessageAsRead = useCallback(async (messageId: string) => {
+    if (!user?.token || !user?.id) return;
+
+    console.log('[Chat] 🚀 Optimistic mark message as read:', messageId);
+
+    // OPTIMISTIC UPDATE: Update UI immediately for instant feedback (COPY WEB EXACTLY)
+    setMessages(prevMessages => {
+      return prevMessages.map(message => {
+        if (message.id === messageId) {
+          const updatedReadStatus = [...(message.read_status || [])];
+          const userReadIndex = updatedReadStatus.findIndex(status => status.user_id === user.id);
+
+          if (userReadIndex >= 0) {
+            // Update existing read status
+            updatedReadStatus[userReadIndex] = {
+              ...updatedReadStatus[userReadIndex],
+              is_read: true,
+              read_at: new Date().toISOString()
+            };
+          } else {
+            // Add new read status
+            updatedReadStatus.push({
+              user_id: user.id,
+              username: user.name || user.email || `User ${user.id}`,
+              is_read: true,
+              read_at: new Date().toISOString()
+            });
+          }
+
+          return { ...message, read_status: updatedReadStatus };
+        }
+        return message;
+      });
+    });
+
+    // API call in background (non-blocking) - COPY WEB EXACTLY
+    try {
+      const response = await fetch(`${API_URL}/messages/read`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message_id: messageId }),
+      });
+
+      if (response.ok) {
+        console.log('[Chat] ✅ Confirmed mark message as read:', messageId);
+      } else {
+        console.error('[Chat] ❌ Failed to mark message as read:', response.status);
+      }
+    } catch (error) {
+      console.error('[Chat] ❌ Error marking message as read:', error);
+    }
+  }, [user?.token, user?.id]); // FIXED: Add dependencies for useCallback
+
+  // WebSocket message handler - FIXED: Use useCallback to prevent stale closures
+  const handleIncomingMessage = useCallback((newMessage: AppWebSocketMessage | WSMessage) => {
     console.log('[Chat] Received WebSocket message:', newMessage);
 
     if ('data' in newMessage && newMessage.data && typeof newMessage.data === 'object') {
@@ -2094,64 +2151,9 @@ export default function ChatDetailScreen() {
         }
       }
     }
-  };
+  }, [chatroomId, user?.id, router, markMessageAsRead]); // FIXED: Add dependencies to prevent stale closures
 
-  // OPTIMISTIC: Mark a specific message as read (copy web implementation exactly)
-  const markMessageAsRead = async (messageId: string) => {
-    if (!user?.token || !user?.id) return;
 
-    console.log('[Chat] 🚀 Optimistic mark message as read:', messageId);
-
-    // OPTIMISTIC UPDATE: Update UI immediately for instant feedback (COPY WEB EXACTLY)
-    setMessages(prevMessages => {
-      return prevMessages.map(message => {
-        if (message.id === messageId) {
-          const updatedReadStatus = [...(message.read_status || [])];
-          const userReadIndex = updatedReadStatus.findIndex(status => status.user_id === user.id);
-
-          if (userReadIndex >= 0) {
-            // Update existing read status
-            updatedReadStatus[userReadIndex] = {
-              ...updatedReadStatus[userReadIndex],
-              is_read: true,
-              read_at: new Date().toISOString()
-            };
-          } else {
-            // Add new read status
-            updatedReadStatus.push({
-              user_id: user.id,
-              username: user.name || user.email || `User ${user.id}`,
-              is_read: true,
-              read_at: new Date().toISOString()
-            });
-          }
-
-          return { ...message, read_status: updatedReadStatus };
-        }
-        return message;
-      });
-    });
-
-    // API call in background (non-blocking) - COPY WEB EXACTLY
-    try {
-      const response = await fetch(`${API_URL}/messages/read`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message_id: messageId }),
-      });
-
-      if (response.ok) {
-        console.log('[Chat] ✅ Confirmed mark message as read:', messageId);
-      } else {
-        console.error('[Chat] ❌ Failed to mark message as read:', response.status);
-      }
-    } catch (error) {
-      console.error('[Chat] ❌ Error marking message as read:', error);
-    }
-  };
 
   // Connect to WebSocket with improved connection management
   useEffect(() => {
@@ -2179,7 +2181,7 @@ export default function ChatDetailScreen() {
         }, 200); // Small delay to ensure cleanup happens after navigation
       };
     }
-  }, [chatroomId, user?.id]);
+  }, [chatroomId, user?.id, handleIncomingMessage, addMessageHandler, removeMessageHandler, connectToRoom, disconnectFromRoom]); // FIXED: Include all dependencies
 
   const fetchChatroom = async () => {
     if (!chatroomId) return;
