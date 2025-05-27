@@ -66,6 +66,7 @@ export default function ChatDetail() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
+  const [showChatroomActions, setShowChatroomActions] = useState(false);
 
   // Media picker hook
   const {
@@ -351,7 +352,7 @@ export default function ChatDetail() {
 
   // Handle three dot menu press
   const handleThreeDotPress = () => {
-    // This will be handled by ChatroomActions component
+    setShowChatroomActions(true);
   };
 
   // Render message item
@@ -447,16 +448,16 @@ export default function ChatDetail() {
       />
 
       {/* Message Actions Modal */}
-      {selectedMessage && (
+      {selectedMessage && user && (
         <MessageActions
           message={selectedMessage}
-          visible={!!selectedMessage}
+          isVisible={!!selectedMessage}
           onClose={() => setSelectedMessage(null)}
           onEdit={async (messageId: string, newText: string, newMediaUrl?: string, newMessageType?: string) => {
             // Handle message edit
             try {
               // TODO: Implement message edit API call
-              console.log('Edit message:', messageId, newText);
+              console.log('Edit message:', messageId, newText, newMediaUrl, newMessageType);
               setSelectedMessage(null);
             } catch (error) {
               console.error('Failed to edit message:', error);
@@ -472,22 +473,27 @@ export default function ChatDetail() {
               console.error('Failed to delete message:', error);
             }
           }}
+          currentUserId={user.id}
         />
       )}
 
       {/* Chatroom Actions */}
-      {chatroom && (
+      {chatroom && user && (
         <ChatroomActions
           chatroom={chatroom}
+          isVisible={showChatroomActions}
+          onClose={() => setShowChatroomActions(false)}
           onDelete={async (chatroomId: string) => {
             try {
               // TODO: Implement chatroom delete API call
               console.log('Delete chatroom:', chatroomId);
+              setShowChatroomActions(false);
               router.back();
             } catch (error) {
               console.error('Failed to delete chatroom:', error);
             }
           }}
+          currentUserId={user.id}
         />
       )}
     </View>
