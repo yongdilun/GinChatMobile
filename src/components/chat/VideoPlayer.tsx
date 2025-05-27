@@ -19,9 +19,10 @@ import { videoPlayerStyles } from './styles/videoPlayerStyles';
 interface VideoPlayerProps {
   uri: string;
   isCompact?: boolean;
+  isHeaderMode?: boolean; // New prop for header display
 }
 
-export function VideoPlayer({ uri, isCompact = false }: VideoPlayerProps) {
+export function VideoPlayer({ uri, isCompact = false, isHeaderMode = false }: VideoPlayerProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -400,58 +401,62 @@ export function VideoPlayer({ uri, isCompact = false }: VideoPlayerProps) {
               </View>
             </View>
 
-            {/* Center controls area - play button */}
-            <View style={videoPlayerStyles.videoCenterControls}>
-              <TouchableOpacity
-                style={[
-                  videoPlayerStyles.videoPlayButton,
-                  isCompact && videoPlayerStyles.videoPlayButtonCompact
-                ]}
-                onPress={() => {
-                  console.log('Play/pause button pressed');
-                  handlePlayPause();
-                }}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name={hasEnded ? "refresh" : isPlaying ? "pause" : "play"}
-                  size={isCompact ? 24 : 40}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* Bottom Controls */}
-            <View style={videoPlayerStyles.videoBottomControls}>
-              <Text style={videoPlayerStyles.videoTimeText}>
-                {formatTime(position)} / {formatTime(duration)}
-              </Text>
-
-              {/* Progress bar */}
-              <View style={videoPlayerStyles.videoProgressContainer}>
+            {/* Center controls area - play button (hidden in header mode) */}
+            {!isHeaderMode && (
+              <View style={videoPlayerStyles.videoCenterControls}>
                 <TouchableOpacity
-                  style={videoPlayerStyles.videoProgressBar}
-                  onPress={(event) => {
-                    if (duration > 0) {
-                      const { locationX } = event.nativeEvent;
-                      const progressBarWidth = 256; // Approximate width
-                      const seekRatio = Math.max(0, Math.min(1, locationX / progressBarWidth));
-                      const seekPosition = seekRatio * duration;
-                      console.log('Progress bar pressed:', { locationX, seekRatio, seekPosition });
-                      seekToPosition(seekPosition);
-                    }
+                  style={[
+                    videoPlayerStyles.videoPlayButton,
+                    isCompact && videoPlayerStyles.videoPlayButtonCompact
+                  ]}
+                  onPress={() => {
+                    console.log('Play/pause button pressed');
+                    handlePlayPause();
                   }}
-                  activeOpacity={1}
+                  activeOpacity={0.8}
                 >
-                  <View
-                    style={[
-                      videoPlayerStyles.videoProgressFill,
-                      { width: `${progress * 100}%` }
-                    ]}
+                  <Ionicons
+                    name={hasEnded ? "refresh" : isPlaying ? "pause" : "play"}
+                    size={isCompact ? 24 : 40}
+                    color="#fff"
                   />
                 </TouchableOpacity>
               </View>
-            </View>
+            )}
+
+            {/* Bottom Controls (hidden in header mode) */}
+            {!isHeaderMode && (
+              <View style={videoPlayerStyles.videoBottomControls}>
+                <Text style={videoPlayerStyles.videoTimeText}>
+                  {formatTime(position)} / {formatTime(duration)}
+                </Text>
+
+                {/* Progress bar */}
+                <View style={videoPlayerStyles.videoProgressContainer}>
+                  <TouchableOpacity
+                    style={videoPlayerStyles.videoProgressBar}
+                    onPress={(event) => {
+                      if (duration > 0) {
+                        const { locationX } = event.nativeEvent;
+                        const progressBarWidth = 256; // Approximate width
+                        const seekRatio = Math.max(0, Math.min(1, locationX / progressBarWidth));
+                        const seekPosition = seekRatio * duration;
+                        console.log('Progress bar pressed:', { locationX, seekRatio, seekPosition });
+                        seekToPosition(seekPosition);
+                      }
+                    }}
+                    activeOpacity={1}
+                  >
+                    <View
+                      style={[
+                        videoPlayerStyles.videoProgressFill,
+                        { width: `${progress * 100}%` }
+                      ]}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
         )}
       </View>

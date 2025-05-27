@@ -723,11 +723,11 @@ GinChatMobile/
 │   │
 │   ├── 🌐 contexts/                 # React contexts
 │   │   ├── 🔐 AuthContext.tsx       # Authentication state
-│   │   └── 🔌 WebSocketContext.tsx  # Real-time messaging
+│   │   └── 🔌 SimpleWebSocketContext.tsx  # Real-time messaging
 │   │
 │   ├── 🌍 services/                 # External services
 │   │   ├── 📡 api.ts                # API client & endpoints
-│   │   └── 🔌 WebSocketService.ts   # WebSocket management
+│   │   └── 🔌 SimpleWebSocketService.ts   # WebSocket management
 │   │
 │   └── 📊 types/                    # TypeScript definitions
 │       └── 🏷️ index.ts              # Type exports
@@ -765,8 +765,8 @@ GinChatMobile/
 |-----------|---------|-----------|
 | **app/** | Expo Router pages and navigation | `_layout.tsx`, screen files |
 | **src/components/** | Reusable UI components | `GoldButton.tsx`, `ProtectedRoute.tsx` |
-| **src/contexts/** | Global state management | `AuthContext.tsx`, `WebSocketContext.tsx` |
-| **src/services/** | External integrations | `api.ts`, `WebSocketService.ts` |
+| **src/contexts/** | Global state management | `AuthContext.tsx`, `SimpleWebSocketContext.tsx` |
+| **src/services/** | External integrations | `api.ts`, `SimpleWebSocketService.ts` |
 | **constants/** | App-wide constants | `GoldTheme.ts`, `Colors.ts` |
 | **assets/** | Static resources | Images, icons, audio files |
 

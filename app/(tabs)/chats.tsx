@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Text, Alert, Modal, View, TextInput, StatusBar, RefreshControl, Clipboard } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
@@ -31,6 +31,8 @@ export default function ChatsScreen() {
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdChatroom, setCreatedChatroom] = useState<Chatroom | null>(null);
+  const [navigating, setNavigating] = useState(false);
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // WebSocket message handler for sidebar updates
   const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
@@ -165,6 +167,15 @@ export default function ChatsScreen() {
     }, [])
   );
 
+  // Cleanup navigation timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const fetchChatrooms = async () => {
     try {
       setLoading(true);
@@ -285,11 +296,35 @@ export default function ChatsScreen() {
   };
 
   const handleChatroomPress = async (chatroom: Chatroom) => {
+    // Prevent multiple rapid taps
+    if (navigating) {
+      console.log('[ChatsScreen] Navigation already in progress, ignoring tap');
+      return;
+    }
+
     try {
+      setNavigating(true);
+      console.log('[ChatsScreen] 🚀 Navigating to chatroom:', chatroom.id);
+
+      // Clear any existing navigation timeout
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+
       // First check if the chatroom still exists before navigating
       await chatAPI.getConversationById(chatroom.id);
+
+      // Navigate to the chat room
       router.push(`/chat/${chatroom.id}`);
+
+      // Reset navigation state after a delay to prevent rapid navigation
+      navigationTimeoutRef.current = setTimeout(() => {
+        setNavigating(false);
+      }, 2000); // 2 second cooldown
+
     } catch (error: any) {
+      setNavigating(false); // Reset immediately on error
+
       if (error.response?.status === 404) {
         console.log('[ChatsScreen] Chatroom no longer exists, refreshing list');
         Alert.alert(
@@ -364,14 +399,27 @@ export default function ChatsScreen() {
   }, [chatrooms]);
 
   const getGoldGradient = (name: string) => {
+    // More consistent gold-themed gradients
     const colors = [
-      ['#FFD700', '#FFA500'],
-      ['#DAA520', '#B8860B'],
-      ['#F4E4BC', '#D4AF37'],
-      ['#FFED4E', '#FFD700'],
-      ['#FFA500', '#FF8C00'],
+      ['#FFD700', '#DAA520'], // Classic gold
+      ['#FFA500', '#FF8C00'], // Orange gold
+      ['#F4E4BC', '#D4AF37'], // Light gold
+      ['#FFED4E', '#FFB347'], // Bright gold
+      ['#B8860B', '#8B7355'], // Dark gold
+      ['#FFE135', '#FFC649'], // Yellow gold
+      ['#D4AF37', '#B8860B'], // Medium gold
+      ['#FFBF00', '#FF9500'], // Amber gold
     ];
-    const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+
+    // Use a more stable hash function for consistency
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      const char = name.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+
+    const index = Math.abs(hash) % colors.length;
     return colors[index];
   };
 
@@ -394,10 +442,24 @@ export default function ChatsScreen() {
   const renderChatroomItem = ({ item }: { item: Chatroom }) => {
     const gradientColors = getGoldGradient(item.name);
 
-    // Ensure all values are properly converted to strings
-    const lastMessage = item.last_message?.content
-      ? String(item.last_message.content)
-      : 'Start the conversation...';
+    // Format last message with username
+    const formatLastMessage = () => {
+      if (!item.last_message?.content) {
+        return 'Start the conversation...';
+      }
+
+      const content = String(item.last_message.content);
+      const senderName = item.last_message.sender_name || 'Unknown';
+      const isOwn = item.last_message.sender_id === user?.id;
+
+      if (isOwn) {
+        return `You: ${content}`;
+      } else {
+        return `${senderName}: ${content}`;
+      }
+    };
+
+    const lastMessage = formatLastMessage();
     const lastMessageTime = item.last_message?.timestamp
       ? formatTime(item.last_message.timestamp)
       : '';
@@ -411,9 +473,10 @@ export default function ChatsScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.chatroomItem}
+        style={[styles.chatroomItem, navigating && styles.chatroomItemDisabled]}
         onPress={() => handleChatroomPress(item)}
-        activeOpacity={0.8}
+        activeOpacity={navigating ? 1 : 0.8}
+        disabled={navigating}
       >
         <LinearGradient
           colors={[GoldTheme.background.card, 'rgba(42, 42, 42, 0.95)']}
@@ -455,8 +518,7 @@ export default function ChatsScreen() {
 
             <View style={styles.chatroomContent}>
               <Text style={styles.lastMessageText} numberOfLines={1} ellipsizeMode="tail">
-                {isOwn && '◾ '}
-                {String(lastMessage || 'Start the conversation...')}
+                {String(lastMessage)}
               </Text>
 
               <View style={styles.memberBadge}>
@@ -1657,5 +1719,9 @@ const styles = StyleSheet.create({
   },
   successModalButton: {
     flex: 1,
+  },
+  // Navigation disabled state
+  chatroomItemDisabled: {
+    opacity: 0.6,
   },
 });
