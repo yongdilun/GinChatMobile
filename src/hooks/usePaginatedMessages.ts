@@ -182,12 +182,14 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
       console.log('[usePaginatedMessages] Load more response:', {
         messageCount: response.messages.length,
         hasMore: response.has_more,
-        nextCursor: response.next_cursor
+        nextCursor: response.next_cursor,
+        totalCount: response.total_count,
+        currentMessageCount: state.messages.length
       });
 
       // If no messages returned, we've reached the end
       if (response.messages.length === 0) {
-        console.log('[usePaginatedMessages] No more messages available - reached the beginning');
+        console.log('[usePaginatedMessages] ✅ No more messages available - reached the beginning of conversation');
         setState(prev => ({
           ...prev,
           hasMore: false,
@@ -196,6 +198,11 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
           error: null,
         }));
         return;
+      }
+
+      // If backend says no more messages, respect that
+      if (!response.has_more) {
+        console.log('[usePaginatedMessages] ✅ Backend indicates no more messages available');
       }
 
       // Sort new messages in reverse chronological order (newest first)
