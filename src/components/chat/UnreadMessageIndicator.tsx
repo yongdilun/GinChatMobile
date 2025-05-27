@@ -40,27 +40,27 @@ export function UnreadMessageIndicator({
     if (!messages || messages.length === 0) return null;
 
     // Sort messages by sent_at (oldest first for this calculation)
-    const sortedMessages = [...messages].sort((a, b) => 
+    const sortedMessages = [...messages].sort((a, b) =>
       new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
     );
 
     // Find the first message that the current user hasn't read
     for (let i = 0; i < sortedMessages.length; i++) {
       const message = sortedMessages[i];
-      
+
       // Skip own messages
       if (message.sender_id === currentUserId) continue;
-      
+
       // Check if current user has read this message
       const userReadStatus = message.read_status?.find(
         status => status.user_id === currentUserId && status.is_read === true
       );
-      
+
       if (!userReadStatus) {
         // Found the oldest unread message
         // Find its index in the original messages array (which is sorted newest first)
         const originalIndex = messages.findIndex(m => m.id === message.id);
-        
+
         return {
           message,
           originalIndex,
@@ -74,7 +74,7 @@ export function UnreadMessageIndicator({
         };
       }
     }
-    
+
     return null;
   }, [messages, currentUserId]);
 
@@ -97,7 +97,7 @@ export function UnreadMessageIndicator({
           <View style={styles.content}>
             <Ionicons name="arrow-down" size={16} color="#fff" />
             <Text style={styles.text}>
-              {oldestUnreadInfo.count} unread message{oldestUnreadInfo.count > 1 ? 's' : ''}
+              unread message
             </Text>
           </View>
         </LinearGradient>

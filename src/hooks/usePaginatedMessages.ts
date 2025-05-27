@@ -149,13 +149,20 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
       return;
     }
 
-    if (isLoadingRef.current || isLoadingMoreRef.current || !state.hasMore || !state.nextCursor) {
+    if (isLoadingRef.current || isLoadingMoreRef.current || !state.hasMore) {
       console.log('[usePaginatedMessages] Skipping load more - conditions not met', {
         isLoading: isLoadingRef.current,
         isLoadingMore: isLoadingMoreRef.current,
         hasMore: state.hasMore,
         hasCursor: !!state.nextCursor
       });
+      return;
+    }
+
+    // If we don't have a cursor but hasMore is true, something is wrong - stop loading
+    if (!state.nextCursor) {
+      console.log('[usePaginatedMessages] No cursor available but hasMore is true - stopping pagination');
+      setState(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
@@ -174,8 +181,22 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
 
       console.log('[usePaginatedMessages] Load more response:', {
         messageCount: response.messages.length,
-        hasMore: response.has_more
+        hasMore: response.has_more,
+        nextCursor: response.next_cursor
       });
+
+      // If no messages returned, we've reached the end
+      if (response.messages.length === 0) {
+        console.log('[usePaginatedMessages] No more messages available - reached the beginning');
+        setState(prev => ({
+          ...prev,
+          hasMore: false,
+          nextCursor: undefined,
+          loadingMore: false,
+          error: null,
+        }));
+        return;
+      }
 
       // Sort new messages in reverse chronological order (newest first)
       const sortedNewMessages = response.messages.sort((a, b) =>
@@ -192,7 +213,10 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
         error: null,
       }));
 
-      console.log('[usePaginatedMessages] ✅ More messages loaded successfully');
+      console.log('[usePaginatedMessages] ✅ More messages loaded successfully', {
+        totalMessages: state.messages.length + sortedNewMessages.length,
+        hasMoreAfterLoad: response.has_more
+      });
 
     } catch (error) {
       console.error('[usePaginatedMessages] Error loading more messages:', error);
@@ -204,7 +228,7 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
     } finally {
       isLoadingMoreRef.current = false;
     }
-  }, [chatroomId, state.hasMore, state.nextCursor]);
+  }, [chatroomId, state.hasMore, state.nextCursor, state.messages.length]);
 
   const addNewMessage = useCallback((message: Message) => {
     setState(prev => ({

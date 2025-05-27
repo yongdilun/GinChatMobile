@@ -12,6 +12,7 @@ import {
   Text,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { chatAPI, Message, Chatroom, MessageType, mediaAPI, ReadStatus } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -628,14 +629,26 @@ export default function ChatDetail() {
           }}
           ListFooterComponent={
             loadingMore ? (
-              <View style={{ padding: 16, alignItems: 'center' }}>
+              <View style={styles.loadingFooter}>
                 <ActivityIndicator size="small" color={GoldTheme.gold.primary} />
+                <Text style={styles.loadingText}>Loading older messages...</Text>
               </View>
             ) : !hasMore && messages.length > 0 ? (
-              <View style={{ padding: 16, alignItems: 'center' }}>
-                <Text style={{ color: GoldTheme.text.muted, fontSize: 14 }}>
-                  No more messages
-                </Text>
+              <View style={styles.endOfMessagesContainer}>
+                <LinearGradient
+                  colors={['rgba(255, 215, 0, 0.1)', 'rgba(255, 165, 0, 0.05)']}
+                  style={styles.endOfMessagesBadge}
+                >
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={16}
+                    color={GoldTheme.gold.primary}
+                    style={styles.endIcon}
+                  />
+                  <Text style={styles.endOfMessagesText}>
+                    Beginning of conversation
+                  </Text>
+                </LinearGradient>
               </View>
             ) : null
           }
@@ -795,5 +808,40 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     paddingVertical: 16,
+  },
+  loadingFooter: {
+    padding: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: GoldTheme.text.muted,
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  endOfMessagesContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  endOfMessagesBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.2)',
+  },
+  endIcon: {
+    marginRight: 8,
+    opacity: 0.7,
+  },
+  endOfMessagesText: {
+    color: GoldTheme.gold.primary,
+    fontSize: 14,
+    fontWeight: '500',
+    opacity: 0.8,
   },
 });
