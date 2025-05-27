@@ -26,6 +26,7 @@ import { VideoPlayer } from '../../src/components/chat/VideoPlayer';
 import { MessageItem } from '../../src/components/chat/MessageItem';
 import { MessageInput } from '../../src/components/chat/MessageInput';
 import { ImageModal } from '../../src/components/chat/ImageModal';
+import { UnreadMessageIndicator } from '../../src/components/chat/UnreadMessageIndicator';
 import { useWebSocketHandler } from '../../src/hooks/useWebSocketHandler';
 import { useMediaPicker } from '../../src/hooks/useMediaPicker';
 import { useAudioRecorder } from '../../src/hooks/useAudioRecorder';
@@ -68,6 +69,7 @@ export default function ChatDetail() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
   const [showChatroomActions, setShowChatroomActions] = useState(false);
+  const [showUnreadIndicator, setShowUnreadIndicator] = useState(true);
 
   // Media picker hook
   const {
@@ -438,6 +440,19 @@ export default function ChatDetail() {
     setShowChatroomActions(true);
   };
 
+  // Handle scroll to unread message
+  const handleScrollToUnread = (messageIndex: number) => {
+    if (flatListRef.current && messageIndex >= 0) {
+      flatListRef.current.scrollToIndex({
+        index: messageIndex,
+        animated: true,
+        viewPosition: 0.5, // Center the message
+      });
+      // Hide the indicator after scrolling
+      setShowUnreadIndicator(false);
+    }
+  };
+
   // Render message item
   const renderMessage = useCallback(({ item }: { item: Message }) => {
     const isOwnMessage = item.sender_id === user?.id;
@@ -512,7 +527,21 @@ export default function ChatDetail() {
           inverted
           onEndReachedThreshold={0.1}
           extraData={messages} // Force re-render when messages change
+          onScrollToIndexFailed={(info) => {
+            // Handle scroll index failed
+            console.warn('Scroll to index failed:', info);
+          }}
         />
+
+        {/* Unread Message Indicator */}
+        {user && (
+          <UnreadMessageIndicator
+            messages={messages}
+            currentUserId={user.id}
+            onScrollToUnread={handleScrollToUnread}
+            isVisible={showUnreadIndicator}
+          />
+        )}
       </LinearGradient>
 
       {/* Message Input */}

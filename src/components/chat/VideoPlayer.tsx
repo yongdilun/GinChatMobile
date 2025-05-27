@@ -350,16 +350,38 @@ export function VideoPlayer({ uri }: VideoPlayerProps) {
               </View>
             </View>
 
-            {/* Center controls area - now just for spacing */}
+            {/* Center controls area - play button */}
             <View style={videoPlayerStyles.videoCenterControls}>
-              {/* No play button - users can only expand or download */}
+              <TouchableOpacity
+                style={videoPlayerStyles.videoPlayButton}
+                onPress={handlePlayPause}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={isPlaying ? "pause" : "play"}
+                  size={40}
+                  color="#fff"
+                />
+              </TouchableOpacity>
             </View>
 
-            {/* Bottom Controls - simplified for expand/download only */}
+            {/* Bottom Controls */}
             <View style={videoPlayerStyles.videoBottomControls}>
-              <Text style={videoPlayerStyles.videoInfoText}>
-                Tap expand to play video
+              <Text style={videoPlayerStyles.videoTimeText}>
+                {formatTime(position)} / {formatTime(duration)}
               </Text>
+
+              {/* Progress bar */}
+              <View style={videoPlayerStyles.videoProgressContainer}>
+                <View style={videoPlayerStyles.videoProgressBar}>
+                  <View
+                    style={[
+                      videoPlayerStyles.videoProgressFill,
+                      { width: `${progress * 100}%` }
+                    ]}
+                  />
+                </View>
+              </View>
             </View>
 
             {/* Background touch area for showing/hiding controls */}

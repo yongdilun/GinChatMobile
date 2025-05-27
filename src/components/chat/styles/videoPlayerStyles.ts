@@ -81,6 +81,16 @@ export const videoPlayerStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  videoPlayButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+  },
   videoBottomControls: {
     paddingHorizontal: 12,
     paddingBottom: 12,
@@ -139,5 +149,29 @@ export const videoPlayerStyles = StyleSheet.create({
   fullscreenVideo: {
     width: '100%',
     height: '100%',
+  },
+  videoTimeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  videoProgressContainer: {
+    width: '100%',
+    paddingHorizontal: 4,
+  },
+  videoProgressBar: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  videoProgressFill: {
+    height: '100%',
+    backgroundColor: GoldTheme.gold.primary,
+    borderRadius: 2,
   },
 });

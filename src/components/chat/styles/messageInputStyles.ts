@@ -114,4 +114,19 @@ export const messageInputStyles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
+  audioRecordingPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: GoldTheme.background.card,
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.2)',
+  },
+  audioRemoveButton: {
+    marginLeft: 8,
+    padding: 4,
+  },
 });

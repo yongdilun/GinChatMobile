@@ -18,9 +18,10 @@ import { audioPlayerStyles } from './styles/audioPlayerStyles';
 interface AudioPlayerProps {
   uri: string;
   isCompact?: boolean;
+  isPreview?: boolean;
 }
 
-export function AudioPlayer({ uri, isCompact = false }: AudioPlayerProps) {
+export function AudioPlayer({ uri, isCompact = false, isPreview = false }: AudioPlayerProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -238,67 +239,105 @@ export function AudioPlayer({ uri, isCompact = false }: AudioPlayerProps) {
 
   const progress = duration > 0 ? Math.min(position / duration, 1) : 0;
 
+  // Render compact/preview version
+  if (isCompact || isPreview) {
+    return (
+      <View style={audioPlayerStyles.compactContainer}>
+        <TouchableOpacity
+          onPress={playSound}
+          style={audioPlayerStyles.compactPlayButton}
+          disabled={isLoading || audioError}
+        >
+          <LinearGradient
+            colors={GoldTheme.gradients.goldButton}
+            style={audioPlayerStyles.compactButtonGradient}
+          >
+            <Ionicons
+              name={isLoading ? 'hourglass-outline' : isPlaying ? 'pause' : 'play'}
+              size={16}
+              color={GoldTheme.text.inverse}
+              style={{ marginLeft: isPlaying || isLoading ? 0 : 1 }}
+            />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <View style={audioPlayerStyles.compactInfo}>
+          <View style={audioPlayerStyles.compactWaveform}>
+            {waveAnimationValues.slice(0, 6).map((height, index) => (
+              <View
+                key={index}
+                style={[
+                  audioPlayerStyles.compactWaveBar,
+                  {
+                    height: Math.max(2, height * (isPlaying ? 8 : 4)),
+                    opacity: isPlaying ? height : 0.4
+                  }
+                ]}
+              />
+            ))}
+          </View>
+
+          <Text style={audioPlayerStyles.compactDuration}>
+            {duration > 0 ? formatTime(duration) : '0:00'}
+          </Text>
+        </View>
+
+        {!isPreview && (
+          <TouchableOpacity
+            onPress={handleDownload}
+            disabled={isDownloading}
+            style={audioPlayerStyles.compactDownloadButton}
+          >
+            {isDownloading ? (
+              <ActivityIndicator size="small" color={GoldTheme.gold.primary} />
+            ) : (
+              <Ionicons name="download-outline" size={14} color={GoldTheme.gold.primary} />
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }
+
+  // Error state for full version
   if (audioError) {
     return (
-      <View style={[audioPlayerStyles.audioPlayerContainer, isCompact && audioPlayerStyles.audioPlayerCompact]}>
-        <View style={[audioPlayerStyles.audioErrorContainer, isCompact && audioPlayerStyles.audioErrorCompact]}>
-          <Ionicons name="musical-notes" size={isCompact ? 16 : 24} color={GoldTheme.text.muted} />
-          <Text style={[audioPlayerStyles.audioErrorText, isCompact && audioPlayerStyles.audioErrorTextCompact]}>
-            {isCompact ? 'Audio Error' : 'Audio Unavailable'}
-          </Text>
+      <View style={audioPlayerStyles.audioPlayerContainer}>
+        <View style={audioPlayerStyles.audioErrorContainer}>
+          <Ionicons name="musical-notes" size={24} color={GoldTheme.text.muted} />
+          <Text style={audioPlayerStyles.audioErrorText}>Audio Unavailable</Text>
         </View>
       </View>
     );
   }
 
+  // Full version
   return (
-    <View style={[audioPlayerStyles.audioPlayerContainer, isCompact && audioPlayerStyles.audioPlayerCompact]}>
+    <View style={audioPlayerStyles.audioPlayerContainer}>
       <LinearGradient
-        colors={isCompact
-          ? ['rgba(50, 50, 50, 0.8)', 'rgba(30, 30, 30, 0.9)']
-          : ['rgba(45, 45, 45, 0.85)', 'rgba(25, 25, 25, 0.95)']}
-        style={[audioPlayerStyles.audioPlayerGradient, isCompact && audioPlayerStyles.audioPlayerGradientCompact]}
+        colors={['rgba(45, 45, 45, 0.85)', 'rgba(25, 25, 25, 0.95)']}
+        style={audioPlayerStyles.audioPlayerGradient}
       >
-        {/* Audio wave visualization background */}
-        <View style={[audioPlayerStyles.audioWaveBackground, isCompact && audioPlayerStyles.audioWaveBackgroundCompact]}>
-          {waveAnimationValues.map((height, index) => (
-            <View
-              key={index}
-              style={[
-                audioPlayerStyles.audioWaveBar,
-                {
-                  height: isCompact
-                    ? Math.max(3, height * (isPlaying ? 12 : 6))
-                    : Math.max(6, height * (isPlaying ? 22 : 8)),
-                  opacity: isPlaying ? height : 0.3
-                }
-              ]}
-            />
-          ))}
-        </View>
-
-        <TouchableOpacity
-          onPress={playSound}
-          style={[audioPlayerStyles.audioPlayButton, isCompact && audioPlayerStyles.audioPlayButtonCompact]}
-          disabled={isLoading || audioError}
-        >
-          <LinearGradient
-            colors={GoldTheme.gradients.goldButton}
-            style={[audioPlayerStyles.audioButtonGradient, isCompact && audioPlayerStyles.audioButtonGradientCompact]}
+        <View style={audioPlayerStyles.audioContent}>
+          <TouchableOpacity
+            onPress={playSound}
+            style={audioPlayerStyles.audioPlayButton}
+            disabled={isLoading || audioError}
           >
-            <View style={audioPlayerStyles.playButtonIcon}>
+            <LinearGradient
+              colors={GoldTheme.gradients.goldButton}
+              style={audioPlayerStyles.audioButtonGradient}
+            >
               <Ionicons
                 name={isLoading ? 'hourglass-outline' : isPlaying ? 'pause' : 'play'}
-                size={isCompact ? 16 : 22}
+                size={20}
                 color={GoldTheme.text.inverse}
                 style={{ marginLeft: isPlaying || isLoading ? 0 : 2 }}
               />
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
+            </LinearGradient>
+          </TouchableOpacity>
 
-        <View style={audioPlayerStyles.audioInfoContainer}>
-          {!isCompact && (
+          <View style={audioPlayerStyles.audioInfoContainer}>
             <View style={audioPlayerStyles.audioHeader}>
               <View style={audioPlayerStyles.audioTitleContainer}>
                 <View style={audioPlayerStyles.audioIconWrapper}>
@@ -329,39 +368,7 @@ export function AudioPlayer({ uri, isCompact = false }: AudioPlayerProps) {
                 </LinearGradient>
               </TouchableOpacity>
             </View>
-          )}
 
-          {isCompact && (
-            <View style={audioPlayerStyles.audioHeader}>
-              <View style={audioPlayerStyles.audioTitleText}>
-                <Text style={[audioPlayerStyles.audioTitle, { fontSize: 12 }]}>
-                  {formatTime(position)} / {formatTime(duration)}
-                </Text>
-                <Text style={[audioPlayerStyles.audioSubtitle, { fontSize: 10 }]}>
-                  {isPlaying ? '♪ Playing' : isLoading ? 'Loading...' : 'Audio'}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                onPress={handleDownload}
-                disabled={isDownloading}
-                style={[audioPlayerStyles.audioDownloadButton, { marginLeft: 8 }]}
-              >
-                <LinearGradient
-                  colors={isDownloading ? ['#888', '#666'] : ['rgba(255, 215, 0, 0.2)', 'rgba(255, 215, 0, 0.1)']}
-                  style={[audioPlayerStyles.downloadButtonGradient, { padding: 6 }]}
-                >
-                  {isDownloading ? (
-                    <ActivityIndicator size="small" color={GoldTheme.gold.primary} />
-                  ) : (
-                    <Ionicons name="download-outline" size={14} color={GoldTheme.gold.primary} />
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {!isCompact && (
             <View style={audioPlayerStyles.audioProgressBar}>
               <TouchableOpacity
                 style={audioPlayerStyles.audioProgressBarContainer}
@@ -371,7 +378,6 @@ export function AudioPlayer({ uri, isCompact = false }: AudioPlayerProps) {
                     const progressBarWidth = 220;
                     const seekRatio = Math.max(0, Math.min(1, locationX / progressBarWidth));
                     const seekPosition = seekRatio * duration;
-                    console.log('Audio seek:', { locationX, seekRatio, seekPosition, duration });
                     seekToPosition(seekPosition);
                   }
                 }}
@@ -388,37 +394,7 @@ export function AudioPlayer({ uri, isCompact = false }: AudioPlayerProps) {
                 </View>
               </TouchableOpacity>
             </View>
-          )}
 
-          {isCompact && (
-            <View style={[audioPlayerStyles.audioProgressBar, { marginBottom: 4 }]}>
-              <TouchableOpacity
-                style={[audioPlayerStyles.audioProgressBarContainer, { paddingVertical: 4 }]}
-                onPress={(event) => {
-                  if (duration > 0) {
-                    const { locationX } = event.nativeEvent;
-                    const progressBarWidth = 140; // Smaller for compact mode
-                    const seekRatio = Math.max(0, Math.min(1, locationX / progressBarWidth));
-                    const seekPosition = seekRatio * duration;
-                    seekToPosition(seekPosition);
-                  }
-                }}
-              >
-                <View style={[audioPlayerStyles.audioProgressBarTrack, { height: 2 }]}>
-                  <LinearGradient
-                    colors={GoldTheme.gradients.goldButton}
-                    style={[
-                      audioPlayerStyles.audioProgress,
-                      { width: `${Math.max(0, Math.min(100, progress * 100))}%` }
-                    ]}
-                  />
-                  <View style={[audioPlayerStyles.audioProgressThumb, { width: 6, height: 6, top: -2, left: `${Math.max(0, Math.min(94, progress * 100))}%` }]} />
-                </View>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {!isCompact && (
             <View style={audioPlayerStyles.audioTimeContainer}>
               <View style={audioPlayerStyles.audioTimeWrapper}>
                 <Text style={audioPlayerStyles.audioTimeText}>
@@ -434,7 +410,7 @@ export function AudioPlayer({ uri, isCompact = false }: AudioPlayerProps) {
                 <Text style={audioPlayerStyles.audioQualityText}>HQ</Text>
               </View>
             </View>
-          )}
+          </View>
         </View>
       </LinearGradient>
     </View>

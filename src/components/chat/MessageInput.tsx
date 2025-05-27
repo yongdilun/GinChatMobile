@@ -98,22 +98,11 @@ export function MessageInput({
 
         {/* Audio Recording Preview */}
         {recordedAudio && (
-          <View style={messageInputStyles.mediaPreview}>
-            <View style={messageInputStyles.mediaPreviewContent}>
-              <View style={messageInputStyles.audioPreview}>
-                <AudioPlayer uri={recordedAudio.uri} />
-              </View>
-
-              <TouchableOpacity onPress={onRemoveAudio} style={messageInputStyles.removeButton}>
-                <Ionicons name="close-circle" size={24} color={GoldTheme.status.error} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={messageInputStyles.fileInfoContainer}>
-              <Text style={messageInputStyles.fileName}>
-                Voice Message ({Math.round(recordedAudio.duration)}s)
-              </Text>
-            </View>
+          <View style={messageInputStyles.audioRecordingPreview}>
+            <AudioPlayer uri={recordedAudio.uri} isCompact={true} isPreview={true} />
+            <TouchableOpacity onPress={onRemoveAudio} style={messageInputStyles.audioRemoveButton}>
+              <Ionicons name="close-circle" size={20} color={GoldTheme.status.error} />
+            </TouchableOpacity>
           </View>
         )}
 
