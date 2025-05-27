@@ -130,10 +130,10 @@ export default function ChatsScreen() {
       removeMessageHandler(handleWebSocketMessage);
       // Don't disconnect if we're connected to a chat room
       if (currentRoomId && currentRoomId === 'global_sidebar') {
-        disconnectFromSidebar();
+        disconnectFromRoom();
       }
     };
-  }, [connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, handleWebSocketMessage, currentRoomId]);
+  }, [connectToSidebar, disconnectFromRoom, addMessageHandler, removeMessageHandler, handleWebSocketMessage, currentRoomId]);
 
   useEffect(() => {
     fetchChatrooms();
