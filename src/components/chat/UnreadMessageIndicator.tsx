@@ -28,6 +28,7 @@ interface UnreadMessageIndicatorProps {
   onScrollToUnread: (messageIndex: number) => void;
   isVisible: boolean;
   hasMore?: boolean; // Add pagination state awareness
+  isDismissed?: boolean; // Track if indicator has been dismissed
 }
 
 export function UnreadMessageIndicator({
@@ -35,12 +36,13 @@ export function UnreadMessageIndicator({
   currentUserId,
   onScrollToUnread,
   isVisible,
-  hasMore = true
+  hasMore = true,
+  isDismissed = false
 }: UnreadMessageIndicatorProps) {
   // Find the oldest unread message (static calculation, not affected by real-time updates)
   const oldestUnreadInfo = useMemo(() => {
-    // Don't show if no messages, not visible, messages array is empty, or all messages loaded
-    if (!messages || messages.length === 0 || !isVisible || !hasMore) return null;
+    // Don't show if no messages, not visible, messages array is empty, all messages loaded, or dismissed
+    if (!messages || messages.length === 0 || !isVisible || !hasMore || isDismissed) return null;
 
     // Sort messages by sent_at (oldest first for this calculation)
     const sortedMessages = [...messages].sort((a, b) =>
@@ -64,25 +66,30 @@ export function UnreadMessageIndicator({
         // Find its index in the original messages array (which is sorted newest first)
         const originalIndex = messages.findIndex(m => m.id === message.id);
 
+        const unreadCount = sortedMessages.slice(i).filter(m => {
+          if (m.sender_id === currentUserId) return false;
+          const readStatus = m.read_status?.find(
+            status => status.user_id === currentUserId && status.is_read === true
+          );
+          return !readStatus;
+        }).length;
+
+        // Only show indicator if there are 5 or more unread messages
+        if (unreadCount < 5) return null;
+
         return {
           message,
           originalIndex,
-          count: sortedMessages.slice(i).filter(m => {
-            if (m.sender_id === currentUserId) return false;
-            const readStatus = m.read_status?.find(
-              status => status.user_id === currentUserId && status.is_read === true
-            );
-            return !readStatus;
-          }).length
+          count: unreadCount
         };
       }
     }
 
     return null;
-  }, [messages, currentUserId, isVisible, hasMore]);
+  }, [messages, currentUserId, isVisible, hasMore, isDismissed]);
 
-  // Don't show if no unread messages, not visible, no messages at all, or all messages loaded
-  if (!oldestUnreadInfo || !isVisible || !messages || messages.length === 0 || !hasMore) {
+  // Don't show if no unread messages, not visible, no messages at all, all messages loaded, or dismissed
+  if (!oldestUnreadInfo || !isVisible || !messages || messages.length === 0 || !hasMore || isDismissed) {
     return null;
   }
 
@@ -98,7 +105,7 @@ export function UnreadMessageIndicator({
           style={styles.indicator}
         >
           <View style={styles.content}>
-            <Ionicons name="arrow-down" size={16} color="#fff" />
+            <Ionicons name="arrow-up" size={16} color="#fff" />
             <Text style={styles.text}>
               unread message
             </Text>

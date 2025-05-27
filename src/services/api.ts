@@ -62,6 +62,21 @@ const handleApiError = (error: unknown) => {
       });
     }
 
+    // Handle 429 Rate Limit
+    if (statusCode === 429) {
+      console.warn('API Error: 429 Rate Limit Exceeded');
+      const retryAfter = axiosError.response?.headers['retry-after'] || 1;
+      const delay = Math.min(parseInt(retryAfter) * 1000, 5000); // Max 5 seconds
+
+      console.warn(`[API] Rate limit hit. Suggested retry after ${delay}ms`);
+
+      return Promise.reject({
+        status: 'rate_limit',
+        message: 'Too many requests. Please slow down.',
+        retryAfter: delay
+      });
+    }
+
     // Handle other status codes
     let errorMessage = 'An error occurred';
     if (errorData?.message) {
@@ -85,19 +100,86 @@ const handleApiError = (error: unknown) => {
   });
 };
 
+// Rate limiting and request tracking
+const requestTracker = new Map<string, number>();
+const RATE_LIMIT_WINDOW = 1000; // 1 second
+const MAX_REQUESTS_PER_WINDOW = 10; // Max 10 requests per second
+
+// Request debouncing for frequent operations
+const debouncedRequests = new Map<string, NodeJS.Timeout>();
+
+// Helper function to check rate limits
+const checkRateLimit = (endpoint: string): boolean => {
+  const now = Date.now();
+  const key = `${endpoint}_${Math.floor(now / RATE_LIMIT_WINDOW)}`;
+  const count = requestTracker.get(key) || 0;
+
+  if (count >= MAX_REQUESTS_PER_WINDOW) {
+    console.warn(`[API] Rate limit exceeded for ${endpoint}. Requests: ${count}/${MAX_REQUESTS_PER_WINDOW}`);
+    return false;
+  }
+
+  requestTracker.set(key, count + 1);
+
+  // Clean up old entries
+  for (const [k] of requestTracker) {
+    if (parseInt(k.split('_')[1]) < Math.floor(now / RATE_LIMIT_WINDOW) - 5) {
+      requestTracker.delete(k);
+    }
+  }
+
+  return true;
+};
+
+// Debounce helper for frequent API calls
+const debounceRequest = <T extends any[]>(
+  key: string,
+  fn: (...args: T) => Promise<any>,
+  delay: number = 500
+) => {
+  return (...args: T): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      // Clear existing timeout
+      if (debouncedRequests.has(key)) {
+        clearTimeout(debouncedRequests.get(key)!);
+      }
+
+      // Set new timeout
+      const timeout = setTimeout(async () => {
+        try {
+          const result = await fn(...args);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        } finally {
+          debouncedRequests.delete(key);
+        }
+      }, delay);
+
+      debouncedRequests.set(key, timeout);
+    });
+  };
+};
+
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 20000, // 20 seconds timeout - increased for slower connections to hosted services
+  timeout: 15000, // Reduced timeout to 15 seconds to fail faster
 });
 
-// Add request interceptor to add auth token to requests
+// Add request interceptor to add auth token and check rate limits
 api.interceptors.request.use(
   async (config) => {
     try {
+      // Check rate limits for the endpoint
+      const endpoint = config.url || 'unknown';
+      if (!checkRateLimit(endpoint)) {
+        return Promise.reject(new Error(`Rate limit exceeded for ${endpoint}. Please slow down.`));
+      }
+
       const token = await AsyncStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -772,17 +854,21 @@ export const chatAPI = {
     }
   },
 
-  markSingleMessageAsRead: async (messageId: string) => {
-    try {
-      console.log(`[API] Marking single message as read: ${messageId}`);
-      const response = await api.post(`/messages/${messageId}/mark-read`);
-      console.log('[API] Message marked as read successfully:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error(`[API] Failed to mark message ${messageId} as read:`, error);
-      // Don't throw error to prevent disrupting the user experience
-      // Auto-read failures should be silent
-      return null;
-    }
-  },
+  markSingleMessageAsRead: debounceRequest(
+    'markSingleMessageAsRead',
+    async (messageId: string) => {
+      try {
+        console.log(`[API] Marking single message as read: ${messageId}`);
+        const response = await api.post(`/messages/${messageId}/mark-read`);
+        console.log('[API] Message marked as read successfully:', response.data);
+        return response.data;
+      } catch (error) {
+        console.error(`[API] Failed to mark message ${messageId} as read:`, error);
+        // Don't throw error to prevent disrupting the user experience
+        // Auto-read failures should be silent
+        return null;
+      }
+    },
+    300 // 300ms debounce for auto-read operations
+  ),
 };

@@ -76,6 +76,8 @@ export default function ChatDetail() {
 
   // Ref to track if we've already marked messages as read for this session
   const hasMarkedAsReadRef = useRef(false);
+  // Ref to track if unread indicator has been manually dismissed
+  const unreadIndicatorDismissedRef = useRef(false);
 
   // Media picker hook
   const {
@@ -241,6 +243,8 @@ export default function ChatDetail() {
     hasMarkedAsReadRef.current = false;
     // Reset the auto-scroll flag when entering a new chatroom
     hasAutoScrolledRef.current = false;
+    // Reset the unread indicator dismissed flag when entering a new chatroom
+    unreadIndicatorDismissedRef.current = false;
     // Reset messages for new chatroom (this also resets unread divider position)
     resetMessages();
     loadChatroomData();
@@ -280,20 +284,30 @@ export default function ChatDetail() {
       return;
     }
 
-    // Check if there are actually unread messages
-    const hasUnreadMessages = messages.some(msg =>
+    // Count unread messages from others
+    const unreadMessages = messages.filter(msg =>
       msg.sender_id !== user?.id &&
       !msg.read_status?.find(status => status.user_id === user?.id && status.is_read)
     );
 
+    const unreadCount = unreadMessages.length;
+    const hasUnreadMessages = unreadCount > 0;
+
     // Hide indicator if:
     // 1. No unread messages exist
-    // 2. All messages have been loaded (!hasMore) - meaning we've reached the beginning
-    if (!hasUnreadMessages || !hasMore) {
-      console.log('[Chat] Hiding unread indicator:', { hasUnreadMessages, hasMore });
+    // 2. Less than 5 unread messages
+    // 3. All messages have been loaded (!hasMore) - meaning we've reached the beginning
+    // 4. User has manually dismissed the indicator
+    if (!hasUnreadMessages || unreadCount < 5 || !hasMore || unreadIndicatorDismissedRef.current) {
+      console.log('[Chat] Hiding unread indicator:', {
+        hasUnreadMessages,
+        unreadCount,
+        hasMore,
+        dismissed: unreadIndicatorDismissedRef.current
+      });
       setShowUnreadIndicator(false);
     } else {
-      console.log('[Chat] Showing unread indicator:', { hasUnreadMessages, hasMore });
+      console.log('[Chat] Showing unread indicator:', { hasUnreadMessages, unreadCount, hasMore });
       setShowUnreadIndicator(true);
     }
   }, [messages, user?.id, hasMore]);
@@ -579,10 +593,45 @@ export default function ChatDetail() {
         animated: true,
         viewPosition: 0.5, // Center the message
       });
-      // Hide the indicator after scrolling
+      // Hide the indicator after scrolling and mark as dismissed
+      unreadIndicatorDismissedRef.current = true;
       setShowUnreadIndicator(false);
     }
   };
+
+  // Handle viewable items change to detect when user scrolls past unread messages
+  const handleViewableItemsChanged = useCallback(({ viewableItems }: any) => {
+    if (!firstUnreadMessageId || !messagesWithDivider.length || unreadIndicatorDismissedRef.current) return;
+
+    // Find the index of the fixed unread divider
+    const dividerIndex = messagesWithDivider.findIndex(item =>
+      item.type === 'fixed_unread_divider'
+    );
+
+    if (dividerIndex >= 0) {
+      // Check if the unread divider is currently visible
+      const dividerVisible = viewableItems.some((item: any) =>
+        item.index === dividerIndex && item.isViewable
+      );
+
+      // Check if user has scrolled past the divider (divider is no longer visible and we're at higher indices)
+      const hasScrolledPastDivider = viewableItems.some((item: any) =>
+        item.index > dividerIndex && item.isViewable
+      );
+
+      if (hasScrolledPastDivider && !dividerVisible) {
+        console.log('[Chat] 📍 User scrolled past unread divider, dismissing indicator');
+        unreadIndicatorDismissedRef.current = true;
+        setShowUnreadIndicator(false);
+      }
+    }
+  }, [firstUnreadMessageId, messagesWithDivider]);
+
+  // Viewable items config
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50, // Item is considered visible when 50% is visible
+    minimumViewTime: 100, // Minimum time item must be visible
+  }).current;
 
   // Render message item or unread divider
   const renderItem = useCallback(({ item }: { item: any }) => {
@@ -671,6 +720,8 @@ export default function ChatDetail() {
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
           inverted
+          onViewableItemsChanged={handleViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
           onEndReachedThreshold={0.1}
           onEndReached={() => {
             // In an inverted FlatList, onEndReached fires when scrolling to the TOP (oldest messages)
@@ -723,6 +774,7 @@ export default function ChatDetail() {
             onScrollToUnread={handleScrollToUnread}
             isVisible={showUnreadIndicator}
             hasMore={hasMore}
+            isDismissed={unreadIndicatorDismissedRef.current}
           />
         )}
       </LinearGradient>

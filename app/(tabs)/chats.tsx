@@ -90,12 +90,12 @@ export default function ChatsScreen() {
 
       case 'message_updated':
         console.log('[ChatsScreen] Message updated, refreshing chatrooms');
-        fetchChatrooms();
+        fetchChatrooms(); // Use debounced version for automatic updates
         break;
 
       case 'message_deleted':
         console.log('[ChatsScreen] Message deleted, refreshing chatrooms');
-        fetchChatrooms();
+        fetchChatrooms(); // Use debounced version for automatic updates
         break;
 
       case 'unread_count_update':
@@ -164,14 +164,14 @@ export default function ChatsScreen() {
   }, [currentRoomId]);
 
   useEffect(() => {
-    fetchChatrooms();
+    fetchChatrooms(true); // Immediate load on mount
   }, []);
 
   // Refresh chatrooms when screen comes into focus (e.g., after deleting a chatroom)
   useFocusEffect(
     useCallback(() => {
       console.log('[ChatsScreen] Screen focused, refreshing chatrooms');
-      fetchChatrooms();
+      fetchChatrooms(true); // Immediate refresh when screen comes into focus
     }, [])
   );
 
@@ -187,37 +187,55 @@ export default function ChatsScreen() {
   // Note: Sorting is now handled by backend for better performance
   // Frontend sorting has been removed in favor of optimized database sorting
 
-  const fetchChatrooms = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // Debounced version of fetchChatrooms to prevent excessive API calls
+  const debouncedFetchChatrooms = useRef<NodeJS.Timeout | null>(null);
 
-      const response = await chatAPI.getConversations();
-
-      // Debug: Log unread counts from API
-      if (response.chatrooms) {
-        response.chatrooms.forEach(chatroom => {
-          if (chatroom.unread_count && chatroom.unread_count > 0) {
-            console.log(`[ChatsScreen] API returned unread count for ${chatroom.name}: ${chatroom.unread_count}`);
-          }
-        });
-      }
-
-      // Chatrooms are already sorted by backend - no frontend sorting needed
-      console.log('[ChatsScreen] Received pre-sorted chatrooms from backend');
-      setChatrooms(response.chatrooms || []);
-
-    } catch (err) {
-      console.error('Error fetching chatrooms:', err);
-      setError('Failed to load chatrooms');
-    } finally {
-      setLoading(false);
+  const fetchChatrooms = useCallback(async (immediate = false) => {
+    // Clear existing timeout
+    if (debouncedFetchChatrooms.current) {
+      clearTimeout(debouncedFetchChatrooms.current);
     }
-  };
+
+    const doFetch = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await chatAPI.getConversations();
+
+        // Debug: Log unread counts from API
+        if (response.chatrooms) {
+          response.chatrooms.forEach(chatroom => {
+            if (chatroom.unread_count && chatroom.unread_count > 0) {
+              console.log(`[ChatsScreen] API returned unread count for ${chatroom.name}: ${chatroom.unread_count}`);
+            }
+          });
+        }
+
+        // Chatrooms are already sorted by backend - no frontend sorting needed
+        console.log('[ChatsScreen] Received pre-sorted chatrooms from backend');
+        setChatrooms(response.chatrooms || []);
+
+      } catch (err) {
+        console.error('Error fetching chatrooms:', err);
+        setError('Failed to load chatrooms');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (immediate) {
+      // Execute immediately for initial load or user-triggered refresh
+      await doFetch();
+    } else {
+      // Debounce for automatic refreshes
+      debouncedFetchChatrooms.current = setTimeout(doFetch, 1000); // 1 second debounce
+    }
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchChatrooms();
+    await fetchChatrooms(true); // Immediate refresh for user-triggered action
     setRefreshing(false);
   };
 
@@ -246,7 +264,7 @@ export default function ChatsScreen() {
       setNewChatroomPassword('');
 
       // Refresh chatrooms list
-      fetchChatrooms();
+      fetchChatrooms(true); // Immediate refresh after creating chatroom
 
       // Show success modal with room code
       setShowSuccessModal(true);
@@ -272,7 +290,7 @@ export default function ChatsScreen() {
       setShowJoinModal(false);
       setShowActionModal(false);
       setChatroomIdToJoin('');
-      fetchChatrooms();
+      fetchChatrooms(true); // Immediate refresh after joining chatroom
       router.push(`/chat/${idToJoin}`);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to join chatroom');
@@ -285,8 +303,8 @@ export default function ChatsScreen() {
     try {
       setLoadingAvailable(true);
 
-      // Get user's current chatrooms
-      const myChatsResponse = await chatAPI.getConversations();
+      // Get user's current chatrooms (use cached data if available to reduce API calls)
+      const myChatsResponse = chatrooms.length > 0 ? { chatrooms } : await chatAPI.getConversations();
       const userChatroomIds = new Set((myChatsResponse.chatrooms || []).map(chat => chat.id));
 
       // Get all available chatrooms
@@ -350,7 +368,7 @@ export default function ChatsScreen() {
                   prevChatrooms.filter(c => c.id !== chatroom.id)
                 );
                 // Also refresh the full list
-                fetchChatrooms();
+                fetchChatrooms(true); // Immediate refresh after error handling
               }
             }
           ]
