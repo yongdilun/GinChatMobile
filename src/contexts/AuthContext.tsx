@@ -2,7 +2,6 @@ import React, { createContext, useState, useContext, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
 import { router } from 'expo-router';
-import webSocketService from '@/services/WebSocketService'; // Import WebSocket service
 
 // Define user type
 export interface User {
@@ -70,10 +69,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Attempting login...');
       const data = await authAPI.login(email, password);
       console.log('Login successful:', data.user);
-      
+
       // Only set loading state AFTER successful API call, when we're actually processing login
       setIsLoading(true);
-      
+
       // Convert backend user data format to our format
       const userData: User = {
         id: data.user.user_id,
@@ -81,16 +80,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: data.user.email,
         avatar: data.user.avatar_url
       };
-      
+
       // Save user data and token
       await Promise.all([
         AsyncStorage.setItem('user', JSON.stringify(userData)),
         AsyncStorage.setItem('token', data.token)
       ]);
-      
+
       setUser(userData);
       setToken(data.token);
-      
+
       // Add a small delay to ensure the auth state is updated before navigation
       setTimeout(() => {
         console.log('Navigating to chats tab specifically...');
@@ -126,19 +125,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('[AuthContext] Current user state:', user);
     console.log('[AuthContext] Current token state:', token ? 'Present' : 'Not present');
     console.log('[AuthContext] Current isLoading state:', isLoading);
-    
+
     setIsLoading(true);
     console.log('[AuthContext] Set isLoading to true');
 
     try {
-      // Step 1: Disconnect WebSocket
-      console.log('[AuthContext] STEP 1: Disconnecting WebSocket...');
-      try {
-        webSocketService.disconnect(); 
-        console.log('[AuthContext] ✅ WebSocket disconnected successfully');
-      } catch (wsError) {
-        console.warn('[AuthContext] ⚠️ WebSocket disconnect error (continuing logout):', wsError);
-      }
+      // Step 1: WebSocket will be handled by SimpleWebSocketContext
+      console.log('[AuthContext] STEP 1: WebSocket will be disconnected by SimpleWebSocketContext...');
 
       // Step 2: Call backend logout API
       console.log('[AuthContext] STEP 2: Calling backend logout API...');
@@ -153,16 +146,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.warn('[AuthContext] API Error details:', JSON.stringify(apiError, null, 2));
         }
       }
-      
+
       // Step 3: Clear local storage
       console.log('[AuthContext] STEP 3: Clearing local storage...');
       try {
         const userRemoved = await AsyncStorage.removeItem('user');
         console.log('[AuthContext] ✅ User removed from storage, result:', userRemoved);
-        
+
         const tokenRemoved = await AsyncStorage.removeItem('token');
         console.log('[AuthContext] ✅ Token removed from storage, result:', tokenRemoved);
-        
+
         // Verify storage is cleared
         const remainingUser = await AsyncStorage.getItem('user');
         const remainingToken = await AsyncStorage.getItem('token');
@@ -172,27 +165,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('[AuthContext] ❌ Storage clearing error:', storageError);
         throw storageError;
       }
-      
+
       // Step 4: Clear state
       console.log('[AuthContext] STEP 4: Clearing application state...');
       console.log('[AuthContext] Setting user to null (was:', user, ')');
       setUser(null);
       console.log('[AuthContext] Setting token to null (was:', token ? 'present' : 'null', ')');
       setToken(null);
-      
+
       // Step 5: Navigate to login
       console.log('[AuthContext] STEP 5: Navigating to login page...');
       console.log('[AuthContext] Current router state before navigation');
-      
+
       try {
         router.replace('/login');
         console.log('[AuthContext] ✅ Navigation to /login initiated');
-        
+
         // Add a small delay to ensure navigation completes
         setTimeout(() => {
           console.log('[AuthContext] Navigation timeout completed');
         }, 100);
-        
+
       } catch (navError) {
         console.error('[AuthContext] ❌ Navigation error:', navError);
         // Try alternative navigation
@@ -203,7 +196,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.error('[AuthContext] ❌ Alternative navigation failed:', altNavError);
         }
       }
-      
+
       console.log('[AuthContext] ✅ Logout process completed successfully');
 
     } catch (error) {
@@ -212,7 +205,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('[AuthContext] Error type:', typeof error);
       console.error('[AuthContext] Error message:', error instanceof Error ? error.message : 'Unknown error');
       console.error('[AuthContext] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      
+
       // Emergency cleanup - even if everything fails, attempt to clear local state and redirect
       console.log('[AuthContext] EMERGENCY CLEANUP: Attempting to clear state...');
       try {
@@ -222,11 +215,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } catch (storageError) {
         console.error('[AuthContext] ❌ Emergency storage cleanup failed:', storageError);
       }
-      
+
       setUser(null);
       setToken(null);
       console.log('[AuthContext] ✅ Emergency state cleanup completed');
-      
+
       try {
         router.replace('/login');
         console.log('[AuthContext] ✅ Emergency navigation successful');
