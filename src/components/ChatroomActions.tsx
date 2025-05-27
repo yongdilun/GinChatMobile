@@ -9,10 +9,10 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  Clipboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
 import { GoldTheme } from '../../constants/GoldTheme';
 import { Chatroom } from '../services/api';
 
@@ -79,10 +79,10 @@ export function ChatroomActions({
     setShowMembersModal(true);
   };
 
-  const handleCopyRoomCode = async () => {
+  const handleCopyRoomCode = () => {
     if (chatroom.room_code) {
       try {
-        await Clipboard.setStringAsync(chatroom.room_code);
+        Clipboard.setString(chatroom.room_code);
         Alert.alert(
           'Copied!',
           `Room code "${chatroom.room_code}" has been copied to clipboard.`,
@@ -250,9 +250,9 @@ export function ChatroomActions({
                   {chatroom.room_code && (
                     <TouchableOpacity
                       style={styles.copyButton}
-                      onPress={async () => {
+                      onPress={() => {
                         try {
-                          await Clipboard.setStringAsync(chatroom.room_code);
+                          Clipboard.setString(chatroom.room_code);
                           Alert.alert('Copied!', 'Room code copied to clipboard.');
                           setShowRoomCodeModal(false);
                         } catch (error) {
@@ -261,7 +261,7 @@ export function ChatroomActions({
                       }}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="copy" size={20} color={GoldTheme.gold.primary} />
+                      <Ionicons name="copy" size={20} color="#fff" />
                       <Text style={styles.copyButtonText}>Copy</Text>
                     </TouchableOpacity>
                   )}
