@@ -188,6 +188,13 @@ export const videoPlayerStyles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#000',
   },
+  videoPlayerPreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
   videoPlayButtonCompact: {
     width: 40,
     height: 40,

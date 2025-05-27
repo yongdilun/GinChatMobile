@@ -77,7 +77,7 @@ export function MessageInput({
               )}
               {selectedMedia.type === 'video' && (
                 <View style={messageInputStyles.videoPreview}>
-                  <VideoPlayer uri={selectedMedia.uri} isCompact={true} />
+                  <VideoPlayer uri={selectedMedia.uri} isPreview={true} />
                   <View style={messageInputStyles.videoPreviewOverlay}>
                     <View style={messageInputStyles.videoPreviewInfo}>
                       <Ionicons name="videocam" size={16} color="#fff" />

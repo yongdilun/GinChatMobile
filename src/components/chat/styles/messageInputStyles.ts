@@ -25,8 +25,9 @@ export const messageInputStyles = StyleSheet.create({
     borderRadius: 8,
   },
   videoPreview: {
-    width: 250,
-    height: 140,
+    width: '100%',
+    maxWidth: 280,
+    height: 160,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#000',

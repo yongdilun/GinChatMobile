@@ -31,12 +31,13 @@ export function ChatDetailHeader({
   onThreeDotPress
 }: ChatDetailHeaderProps) {
   const [showContent, setShowContent] = useState(false);
-  const [activeTab, setActiveTab] = useState<'members' | 'images' | 'videos' | 'audio'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'messages' | 'images' | 'videos' | 'audio'>('members');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const images = messages.filter(m => m.message_type.includes('picture') && m.media_url);
   const videos = messages.filter(m => m.message_type.includes('video') && m.media_url);
   const audios = messages.filter(m => m.message_type.includes('audio') && m.media_url);
+  const textMessages = messages.filter(m => m.message_type === 'text' && m.content).slice(0, 10); // Show last 10 text messages
 
   if (!chatroom) {
     return null;
@@ -157,10 +158,21 @@ export function ChatDetailHeader({
               >
                 <Ionicons
                   name="people-outline"
-                  size={18}
+                  size={16}
                   color={activeTab === 'members' ? GoldTheme.gold.primary : GoldTheme.text.muted}
                 />
                 <Text style={[chatHeaderStyles.tabText, activeTab === 'members' && chatHeaderStyles.tabTextActive]}>Members</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[chatHeaderStyles.tabButton, activeTab === 'messages' && chatHeaderStyles.tabActive]}
+                onPress={() => setActiveTab('messages')}
+              >
+                <Ionicons
+                  name="chatbubble-outline"
+                  size={16}
+                  color={activeTab === 'messages' ? GoldTheme.gold.primary : GoldTheme.text.muted}
+                />
+                <Text style={[chatHeaderStyles.tabText, activeTab === 'messages' && chatHeaderStyles.tabTextActive]}>Messages</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[chatHeaderStyles.tabButton, activeTab === 'images' && chatHeaderStyles.tabActive]}
@@ -168,7 +180,7 @@ export function ChatDetailHeader({
               >
                 <Ionicons
                   name="image-outline"
-                  size={18}
+                  size={16}
                   color={activeTab === 'images' ? GoldTheme.gold.primary : GoldTheme.text.muted}
                 />
                 <Text style={[chatHeaderStyles.tabText, activeTab === 'images' && chatHeaderStyles.tabTextActive]}>Images</Text>
@@ -179,7 +191,7 @@ export function ChatDetailHeader({
               >
                 <Ionicons
                   name="videocam-outline"
-                  size={18}
+                  size={16}
                   color={activeTab === 'videos' ? GoldTheme.gold.primary : GoldTheme.text.muted}
                 />
                 <Text style={[chatHeaderStyles.tabText, activeTab === 'videos' && chatHeaderStyles.tabTextActive]}>Videos</Text>
@@ -190,7 +202,7 @@ export function ChatDetailHeader({
               >
                 <Ionicons
                   name="mic-outline"
-                  size={18}
+                  size={16}
                   color={activeTab === 'audio' ? GoldTheme.gold.primary : GoldTheme.text.muted}
                 />
                 <Text style={[chatHeaderStyles.tabText, activeTab === 'audio' && chatHeaderStyles.tabTextActive]}>Audio</Text>
@@ -215,6 +227,40 @@ export function ChatDetailHeader({
                       <Text style={chatHeaderStyles.memberName}>{member.username}</Text>
                     </View>
                   ))}
+                </ScrollView>
+              )}
+
+              {activeTab === 'messages' && (
+                <ScrollView style={chatHeaderStyles.messagesContainer} showsVerticalScrollIndicator={false}>
+                  {textMessages.length > 0 ? (
+                    textMessages.map((msg, index) => (
+                      <View key={index} style={chatHeaderStyles.messageItem}>
+                        <View style={chatHeaderStyles.messageHeader}>
+                          <LinearGradient
+                            colors={getGoldGradient(msg.sender_username || 'Unknown')}
+                            style={chatHeaderStyles.messageAvatar}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                          >
+                            <Text style={chatHeaderStyles.messageAvatarText}>
+                              {(msg.sender_username || 'U').charAt(0).toUpperCase()}
+                            </Text>
+                          </LinearGradient>
+                          <View style={chatHeaderStyles.messageInfo}>
+                            <Text style={chatHeaderStyles.messageSender}>{msg.sender_username || 'Unknown'}</Text>
+                            <Text style={chatHeaderStyles.messageTime}>
+                              {new Date(msg.sent_at).toLocaleDateString()} {new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={chatHeaderStyles.messageContent} numberOfLines={2}>
+                          {msg.content}
+                        </Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={chatHeaderStyles.emptyTabText}>No text messages yet</Text>
+                  )}
                 </ScrollView>
               )}
 

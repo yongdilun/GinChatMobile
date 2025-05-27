@@ -109,16 +109,16 @@ export const chatHeaderStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 6,
     borderRadius: 8,
   },
   tabActive: {
     backgroundColor: 'rgba(255, 215, 0, 0.2)',
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 10,
     color: GoldTheme.text.muted,
-    marginLeft: 4,
+    marginLeft: 3,
     fontWeight: '500',
   },
   tabTextActive: {
@@ -131,6 +131,9 @@ export const chatHeaderStyles = StyleSheet.create({
     paddingVertical: 8,
   },
   membersContainer: {
+    flex: 1,
+  },
+  messagesContainer: {
     flex: 1,
   },
   memberItem: {
@@ -160,6 +163,50 @@ export const chatHeaderStyles = StyleSheet.create({
     fontSize: 14,
     color: GoldTheme.text.primary,
     fontWeight: '500',
+  },
+  messageItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginVertical: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderRadius: 8,
+  },
+  messageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  messageAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  messageAvatarText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: GoldTheme.text.inverse,
+  },
+  messageInfo: {
+    flex: 1,
+  },
+  messageSender: {
+    fontSize: 12,
+    color: GoldTheme.text.primary,
+    fontWeight: '600',
+  },
+  messageTime: {
+    fontSize: 10,
+    color: GoldTheme.text.muted,
+    marginTop: 2,
+  },
+  messageContent: {
+    fontSize: 12,
+    color: GoldTheme.text.secondary,
+    lineHeight: 16,
+    marginLeft: 32, // Align with message text
   },
   mediaScrollView: {
     flex: 1,

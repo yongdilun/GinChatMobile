@@ -20,9 +20,10 @@ interface VideoPlayerProps {
   uri: string;
   isCompact?: boolean;
   isHeaderMode?: boolean; // New prop for header display
+  isPreview?: boolean; // New prop for message input preview
 }
 
-export function VideoPlayer({ uri, isCompact = false, isHeaderMode = false }: VideoPlayerProps) {
+export function VideoPlayer({ uri, isCompact = false, isHeaderMode = false, isPreview = false }: VideoPlayerProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -302,7 +303,8 @@ export function VideoPlayer({ uri, isCompact = false, isHeaderMode = false }: Vi
     <>
       <View style={[
         videoPlayerStyles.videoPlayerContainer,
-        isCompact && videoPlayerStyles.videoPlayerCompact
+        isCompact && videoPlayerStyles.videoPlayerCompact,
+        isPreview && videoPlayerStyles.videoPlayerPreview
       ]}>
         <Video
           ref={videoRef}
