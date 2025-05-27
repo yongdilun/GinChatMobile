@@ -536,14 +536,19 @@ export const chatAPI = {
     }
   },
 
-  createConversation: async (name: string) => {
+  createConversation: async (name: string, password?: string) => {
     try {
-      console.log('[API] Creating conversation with name:', name);
+      console.log('[API] Creating conversation with name:', name, password ? '(with password)' : '(no password)');
       if (!name || name.length < 3) {
         throw new Error('Chatroom name must be at least 3 characters long');
       }
 
-      const response = await api.post('/chatrooms', { name });
+      const requestData: { name: string; password?: string } = { name };
+      if (password && password.trim()) {
+        requestData.password = password.trim();
+      }
+
+      const response = await api.post('/chatrooms', requestData);
       console.log('[API] Create chatroom response:', response.data);
 
       // The backend returns {chatroom: {...}} structure

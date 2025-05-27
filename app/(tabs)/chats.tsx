@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Text, Alert, Modal, View, TextInput, StatusBar, RefreshControl } from 'react-native';
+import { StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Text, Alert, Modal, View, TextInput, StatusBar, RefreshControl, Clipboard } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,10 +24,13 @@ export default function ChatsScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [newChatroomName, setNewChatroomName] = useState('');
+  const [newChatroomPassword, setNewChatroomPassword] = useState('');
   const [chatroomIdToJoin, setChatroomIdToJoin] = useState('');
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdChatroom, setCreatedChatroom] = useState<Chatroom | null>(null);
 
   // WebSocket message handler for sidebar updates
   const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
@@ -204,15 +207,28 @@ export default function ChatsScreen() {
 
     try {
       setCreating(true);
-      const response = await chatAPI.createConversation(newChatroomName);
+      const response = await chatAPI.createConversation(
+        newChatroomName.trim(),
+        newChatroomPassword.trim() || undefined
+      );
+
+      // Close create modal
       setShowCreateModal(false);
       setShowActionModal(false);
+
+      // Store created chatroom for success modal
+      setCreatedChatroom(response.chatroom);
+
+      // Clear form
       setNewChatroomName('');
+      setNewChatroomPassword('');
+
+      // Refresh chatrooms list
       fetchChatrooms();
 
-      if (response.chatroom && response.chatroom.id) {
-        router.push(`/chat/${response.chatroom.id}`);
-      }
+      // Show success modal with room code
+      setShowSuccessModal(true);
+
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to create chatroom');
     } finally {
@@ -738,6 +754,20 @@ export default function ChatsScreen() {
                 containerStyle={styles.inputContainer}
               />
 
+              <GoldInput
+                label="Password (Optional)"
+                placeholder="Enter a password to protect your room"
+                value={newChatroomPassword}
+                onChangeText={setNewChatroomPassword}
+                secureTextEntry={true}
+                icon={<Ionicons name="lock-closed-outline" size={20} color={GoldTheme.gold.primary} />}
+                containerStyle={styles.inputContainer}
+              />
+
+              <Text style={styles.passwordHint}>
+                💡 Leave password empty for a public room that anyone can join
+              </Text>
+
               <View style={styles.modalButtons}>
                 <GoldButton
                   title={creating ? "Creating..." : "Create Room"}
@@ -751,6 +781,7 @@ export default function ChatsScreen() {
                   onPress={() => {
                     setShowCreateModal(false);
                     setNewChatroomName('');
+                    setNewChatroomPassword('');
                   }}
                   variant="outline"
                   style={styles.modalButton}
@@ -863,6 +894,104 @@ export default function ChatsScreen() {
                   }}
                   variant="outline"
                   style={styles.modalButton}
+                />
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalContainer}>
+            <LinearGradient
+              colors={[GoldTheme.background.card, GoldTheme.background.secondary]}
+              style={styles.successModalGradient}
+            >
+              {/* Success Icon */}
+              <View style={styles.successIconContainer}>
+                <LinearGradient
+                  colors={GoldTheme.gradients.goldButton}
+                  style={styles.successIconGradient}
+                >
+                  <Ionicons name="checkmark" size={32} color={GoldTheme.text.inverse} />
+                </LinearGradient>
+              </View>
+
+              <Text style={styles.successTitle}>Room Created Successfully!</Text>
+              <Text style={styles.successSubtitle}>
+                Your chat room "{createdChatroom?.name}" has been created
+              </Text>
+
+              {/* Room Code Display */}
+              <View style={styles.roomCodeContainer}>
+                <Text style={styles.roomCodeLabel}>Room Code:</Text>
+                <View style={styles.roomCodeBox}>
+                  <Text style={styles.roomCodeText}>
+                    {createdChatroom?.room_code || 'N/A'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={() => {
+                      if (createdChatroom?.room_code) {
+                        Clipboard.setString(createdChatroom.room_code);
+                        Alert.alert('Copied!', 'Room code copied to clipboard.');
+                      }
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="copy" size={18} color="#fff" />
+                    <Text style={styles.copyButtonText}>Copy</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.roomCodeDescription}>
+                  Share this code with others so they can join your room
+                </Text>
+              </View>
+
+              {/* Password Status */}
+              {newChatroomPassword ? (
+                <View style={styles.passwordStatusContainer}>
+                  <Ionicons name="lock-closed" size={16} color={GoldTheme.status.success} />
+                  <Text style={styles.passwordStatusText}>
+                    Room is password protected
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.passwordStatusContainer}>
+                  <Ionicons name="globe" size={16} color={GoldTheme.gold.primary} />
+                  <Text style={styles.passwordStatusText}>
+                    Room is public - anyone can join
+                  </Text>
+                </View>
+              )}
+
+              {/* Action Buttons */}
+              <View style={styles.successModalButtons}>
+                <GoldButton
+                  title="Enter Room"
+                  onPress={() => {
+                    setShowSuccessModal(false);
+                    if (createdChatroom?.id) {
+                      router.push(`/chat/${createdChatroom.id}`);
+                    }
+                  }}
+                  style={styles.successModalButton}
+                />
+                <GoldButton
+                  title="Stay Here"
+                  onPress={() => {
+                    setShowSuccessModal(false);
+                    setCreatedChatroom(null);
+                  }}
+                  variant="outline"
+                  style={styles.successModalButton}
                 />
               </View>
             </LinearGradient>
@@ -1405,5 +1534,128 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     opacity: 0.8,
+  },
+  // Password hint style
+  passwordHint: {
+    fontSize: 12,
+    color: GoldTheme.text.secondary,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontStyle: 'italic',
+    opacity: 0.8,
+  },
+  // Success modal styles
+  successModalContainer: {
+    width: '90%',
+    maxWidth: 400,
+    backgroundColor: GoldTheme.background.card,
+    borderRadius: 20,
+    overflow: 'hidden',
+    ...GoldTheme.shadow.dark,
+  },
+  successModalGradient: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  successIconContainer: {
+    marginBottom: 16,
+    borderRadius: 40,
+    overflow: 'hidden',
+  },
+  successIconGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...GoldTheme.shadow.gold,
+  },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: GoldTheme.text.primary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  successSubtitle: {
+    fontSize: 14,
+    color: GoldTheme.text.secondary,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  roomCodeContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  roomCodeLabel: {
+    fontSize: 14,
+    color: GoldTheme.text.primary,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  roomCodeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    minWidth: 200,
+  },
+  roomCodeText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: GoldTheme.text.primary,
+    flex: 1,
+    textAlign: 'center',
+    letterSpacing: 2,
+  },
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: GoldTheme.gold.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  copyButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  roomCodeDescription: {
+    fontSize: 12,
+    color: GoldTheme.text.secondary,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  passwordStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.05)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  passwordStatusText: {
+    fontSize: 12,
+    color: GoldTheme.text.secondary,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  successModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  successModalButton: {
+    flex: 1,
   },
 });
