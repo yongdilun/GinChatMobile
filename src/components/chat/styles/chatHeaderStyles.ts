@@ -163,7 +163,8 @@ export const chatHeaderStyles = StyleSheet.create({
   },
   mediaScrollView: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 12,
+    minHeight: 120, // Ensure minimum height for proper text display
   },
   mediaThumbnail: {
     width: 80,
@@ -197,14 +198,20 @@ export const chatHeaderStyles = StyleSheet.create({
     color: GoldTheme.text.muted,
     textAlign: 'center',
     fontStyle: 'italic',
-    paddingVertical: 40,
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    flex: 1,
+    alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 30,
     paddingHorizontal: 20,
+    flex: 1,
   },
   loadingText: {
     fontSize: 14,
@@ -217,7 +224,9 @@ export const chatHeaderStyles = StyleSheet.create({
     color: GoldTheme.error || '#FF6B6B',
     textAlign: 'center',
     fontStyle: 'italic',
-    paddingVertical: 40,
+    paddingVertical: 30,
     paddingHorizontal: 20,
+    flex: 1,
+    alignSelf: 'center',
   },
 });

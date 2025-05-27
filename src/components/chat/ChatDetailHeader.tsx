@@ -99,14 +99,15 @@ export function ChatDetailHeader({
     return hasAudioType && hasMediaUrl;
   });
 
-  console.log('[ChatDetailHeader] Filtered media from API:', {
-    total: mediaMessages.length,
-    images: images.length,
-    videos: videos.length,
-    audios: audios.length,
-    loading: loadingMedia,
-    error: mediaError
-  });
+  // Debug logging (can be removed in production)
+  if (mediaMessages.length > 0) {
+    console.log('[ChatDetailHeader] Media loaded:', {
+      total: mediaMessages.length,
+      images: images.length,
+      videos: videos.length,
+      audios: audios.length
+    });
+  }
 
   if (!chatroom) {
     return null;
@@ -313,7 +314,9 @@ export function ChatDetailHeader({
                       </TouchableOpacity>
                     ))
                   ) : (
-                    <Text style={chatHeaderStyles.emptyTabText}>No images uploaded</Text>
+                    <View style={chatHeaderStyles.loadingContainer}>
+                      <Text style={chatHeaderStyles.emptyTabText}>No images uploaded</Text>
+                    </View>
                   )}
                 </ScrollView>
               )}
@@ -338,7 +341,9 @@ export function ChatDetailHeader({
                       </View>
                     ))
                   ) : (
-                    <Text style={chatHeaderStyles.emptyTabText}>No videos uploaded</Text>
+                    <View style={chatHeaderStyles.loadingContainer}>
+                      <Text style={chatHeaderStyles.emptyTabText}>No videos uploaded</Text>
+                    </View>
                   )}
                 </ScrollView>
               )}
@@ -362,7 +367,9 @@ export function ChatDetailHeader({
                       </View>
                     ))
                   ) : (
-                    <Text style={chatHeaderStyles.emptyTabText}>No audio uploaded</Text>
+                    <View style={chatHeaderStyles.loadingContainer}>
+                      <Text style={chatHeaderStyles.emptyTabText}>No audio uploaded</Text>
+                    </View>
                   )}
                 </ScrollView>
               )}

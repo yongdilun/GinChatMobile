@@ -27,8 +27,10 @@ class SimpleWebSocketService {
   private isConnecting: boolean = false;
   private isManualDisconnect: boolean = false;
   private lastConnectionAttempt: number = 0;
-  private readonly CONNECTION_COOLDOWN = 2000; // 2 seconds between connections
+  private readonly CONNECTION_COOLDOWN = 5000; // 5 seconds between connections to prevent 429 errors
   private switchingRooms: boolean = false;
+  private connectionAttempts: number = 0;
+  private readonly MAX_CONNECTION_ATTEMPTS = 3;
   private pendingConnection: { roomId: string; token: string; options?: WebSocketServiceOptions } | null = null;
   private switchTimeout: NodeJS.Timeout | null = null;
 
@@ -122,9 +124,20 @@ class SimpleWebSocketService {
   }
 
   private connectToRoom(roomId: string, token: string, options?: WebSocketServiceOptions): void {
+    // Check connection attempts to prevent rate limiting
+    if (this.connectionAttempts >= this.MAX_CONNECTION_ATTEMPTS) {
+      console.warn("[SimpleWebSocketService] ⚠️ Max connection attempts reached, waiting longer...");
+      setTimeout(() => {
+        this.connectionAttempts = 0; // Reset after longer wait
+        this.connectToRoom(roomId, token, options);
+      }, 30000); // 30 second wait after max attempts
+      return;
+    }
+
     this.isConnecting = true;
     this.isManualDisconnect = false;
     this.lastConnectionAttempt = Date.now();
+    this.connectionAttempts++;
     this.currentRoomId = roomId;
     this.currentToken = token;
 
@@ -137,6 +150,7 @@ class SimpleWebSocketService {
       this.ws.onopen = () => {
         console.log("[SimpleWebSocketService] ✅ Connected to room:", roomId);
         this.isConnecting = false;
+        this.connectionAttempts = 0; // Reset connection attempts on successful connection
         if (options?.onOpen) options.onOpen();
       };
 
@@ -192,13 +206,15 @@ class SimpleWebSocketService {
         }
 
         // Only reconnect if it's an unexpected disconnection (not during room switching)
+        // Use exponential backoff for reconnection attempts
         if (!this.isManualDisconnect && !this.switchingRooms && event.code !== 1000 && this.currentRoomId && this.currentToken) {
-          console.log("[SimpleWebSocketService] 🔄 Reconnecting in 3 seconds...");
+          const reconnectDelay = Math.min(5000 * Math.pow(2, this.connectionAttempts), 30000); // Max 30 seconds
+          console.log(`[SimpleWebSocketService] 🔄 Reconnecting in ${reconnectDelay/1000} seconds... (attempt ${this.connectionAttempts + 1})`);
           setTimeout(() => {
             if (!this.isManualDisconnect && !this.switchingRooms && this.currentRoomId && this.currentToken) {
               this.connect(this.currentRoomId, this.currentToken, options);
             }
-          }, 3000);
+          }, reconnectDelay);
         }
 
         // If we have a pending connection and we're not switching rooms, process it
@@ -237,6 +253,7 @@ class SimpleWebSocketService {
     this.isManualDisconnect = true;
     this.isConnecting = false;
     this.switchingRooms = false;
+    this.connectionAttempts = 0; // Reset connection attempts on manual disconnect
 
     // Clear any pending connections and timeouts
     this.pendingConnection = null;

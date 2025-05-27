@@ -96,11 +96,21 @@ export const SimpleWebSocketProvider: React.FC<{ children: ReactNode }> = ({ chi
       }
     };
 
-    const interval = setInterval(checkConnection, 5000);
+    const interval = setInterval(checkConnection, 10000); // Increased to 10 seconds to reduce overhead
     checkConnection(); // Initial check
 
     return () => clearInterval(interval);
   }, [isConnected, currentRoomId]);
+
+  // Disconnect when token changes or becomes unavailable
+  useEffect(() => {
+    if (!token) {
+      console.log("[SimpleWebSocketContext] Token unavailable, disconnecting...");
+      simpleWebSocketService.disconnect();
+      setIsConnected(false);
+      setCurrentRoomId(null);
+    }
+  }, [token]);
 
   // Cleanup on unmount
   useEffect(() => {
