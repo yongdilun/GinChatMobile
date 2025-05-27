@@ -1,0 +1,215 @@
+import { StyleSheet } from 'react-native';
+import { GoldTheme } from '../../../../constants/GoldTheme';
+
+export const audioPlayerStyles = StyleSheet.create({
+  audioPlayerContainer: {
+    marginVertical: 8,
+    borderRadius: 16,
+    overflow: 'hidden',
+    ...GoldTheme.shadow.medium,
+  },
+  audioPlayerCompact: {
+    marginVertical: 4,
+    borderRadius: 12,
+  },
+  audioPlayerGradient: {
+    padding: 16,
+    borderRadius: 16,
+    position: 'relative',
+  },
+  audioPlayerGradientCompact: {
+    padding: 12,
+    borderRadius: 12,
+  },
+  audioWaveBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.1,
+    paddingHorizontal: 20,
+  },
+  audioWaveBackgroundCompact: {
+    paddingHorizontal: 15,
+  },
+  audioWaveBar: {
+    width: 3,
+    backgroundColor: GoldTheme.gold.primary,
+    marginHorizontal: 1,
+    borderRadius: 1.5,
+  },
+  audioPlayButton: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+    ...GoldTheme.shadow.gold,
+  },
+  audioPlayButtonCompact: {
+    top: 8,
+    left: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  audioButtonGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  audioButtonGradientCompact: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  playButtonIcon: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  audioInfoContainer: {
+    marginLeft: 64,
+    flex: 1,
+  },
+  audioHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  audioTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  audioIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  audioTitleText: {
+    flex: 1,
+  },
+  audioTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: GoldTheme.text.primary,
+    marginBottom: 2,
+  },
+  audioSubtitle: {
+    fontSize: 12,
+    color: GoldTheme.text.secondary,
+    fontStyle: 'italic',
+  },
+  audioDownloadButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginLeft: 12,
+  },
+  downloadButtonGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+  },
+  audioProgressBar: {
+    marginBottom: 8,
+  },
+  audioProgressBarContainer: {
+    paddingVertical: 8,
+  },
+  audioProgressBarTrack: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 2,
+    position: 'relative',
+  },
+  audioProgress: {
+    height: 4,
+    borderRadius: 2,
+  },
+  audioProgressThumb: {
+    position: 'absolute',
+    top: -4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: GoldTheme.gold.primary,
+    ...GoldTheme.shadow.small,
+  },
+  audioTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  audioTimeWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  audioTimeText: {
+    fontSize: 12,
+    color: GoldTheme.text.primary,
+    fontWeight: '500',
+  },
+  audioTimeSeparator: {
+    width: 4,
+    height: 1,
+    backgroundColor: GoldTheme.text.muted,
+    marginHorizontal: 8,
+  },
+  audioDurationText: {
+    fontSize: 12,
+    color: GoldTheme.text.secondary,
+  },
+  audioQualityBadge: {
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+  },
+  audioQualityText: {
+    fontSize: 10,
+    color: GoldTheme.gold.primary,
+    fontWeight: '600',
+  },
+  audioErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+  },
+  audioErrorCompact: {
+    padding: 12,
+    borderRadius: 8,
+  },
+  audioErrorText: {
+    fontSize: 14,
+    color: GoldTheme.text.muted,
+    marginLeft: 8,
+    fontStyle: 'italic',
+  },
+  audioErrorTextCompact: {
+    fontSize: 12,
+    marginLeft: 6,
+  },
+});
