@@ -34,10 +34,21 @@ export default function ChatsScreen() {
     console.log('[ChatsScreen] Received WebSocket message:', message.type);
     console.log('[ChatsScreen] Message data:', JSON.stringify(message.data));
 
-    // IMPORTANT: Completely ignore message_read events in sidebar to prevent unwanted read status updates
+    // IMPORTANT: Filter events based on current room context
     if (message.type === 'message_read') {
-      console.log('[ChatsScreen] 🚫 Ignoring message_read event in sidebar to prevent unwanted updates');
-      return;
+      if (currentRoomId && currentRoomId !== 'global_sidebar') {
+        console.log('[ChatsScreen] 🚫 Ignoring message_read event while in chat room to prevent conflicts');
+        return;
+      } else {
+        console.log('[ChatsScreen] 🚫 Ignoring message_read event in sidebar to prevent unwanted updates');
+        return;
+      }
+    }
+
+    // Always process unread_count_update events regardless of current room
+    // This ensures unread badges update correctly even when in chat rooms
+    if (message.type === 'unread_count_update') {
+      console.log('[ChatsScreen] ✅ Processing unread_count_update event (always allowed)');
     }
 
     switch (message.type) {
@@ -104,7 +115,7 @@ export default function ChatsScreen() {
       default:
         console.log('[ChatsScreen] Unhandled message type:', message.type);
     }
-  }, []);
+  }, [currentRoomId]);
 
   // Connect to sidebar WebSocket when component mounts
   useEffect(() => {
@@ -127,14 +138,15 @@ export default function ChatsScreen() {
     };
   }, []);
 
-  // Remove sidebar handler when navigating to a chat room
+  // Keep sidebar handler active but filter events based on current room
+  // This ensures we always receive unread_count_update events
   useEffect(() => {
     if (currentRoomId && currentRoomId !== 'global_sidebar') {
-      console.log('[ChatsScreen] 🔌 Chat room active, removing sidebar message handler to prevent conflicts');
-      removeMessageHandler(handleWebSocketMessage);
+      console.log('[ChatsScreen] 🔌 Chat room active, sidebar handler will filter events');
+      // Keep handler active but it will filter out message_read events
     } else if (currentRoomId === 'global_sidebar') {
-      console.log('[ChatsScreen] 🔌 Back to sidebar, re-adding message handler');
-      addMessageHandler(handleWebSocketMessage);
+      console.log('[ChatsScreen] 🔌 Back to sidebar, handler will process all relevant events');
+      // Handler processes all events normally
     }
   }, [currentRoomId]);
 
