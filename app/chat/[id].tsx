@@ -616,7 +616,6 @@ export default function ChatDetail() {
       {/* Header */}
       <ChatDetailHeader
         chatroom={chatroom}
-        messages={messages}
         onThreeDotPress={handleThreeDotPress}
       />
 

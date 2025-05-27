@@ -739,4 +739,24 @@ export const chatAPI = {
       throw error;
     }
   },
+
+  getChatroomMedia: async (chatroomId: string): Promise<{ messages: Message[]; count: number }> => {
+    try {
+      console.log(`[API] Fetching all media from chatroom ${chatroomId}`);
+      const response = await api.get(`/chatrooms/${chatroomId}/media`);
+      console.log(`[API] Successfully fetched media from chatroom ${chatroomId}:`, {
+        count: response.data.count,
+        messages: response.data.messages?.length || 0
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`[API] Failed to fetch media from chatroom ${chatroomId}:`, error);
+      if (axios.isAxiosError(error)) {
+        console.error('[API] Error status:', error.response?.status);
+        console.error('[API] Error data:', error.response?.data);
+      }
+      // Return empty response to avoid crashes
+      return { messages: [], count: 0 };
+    }
+  },
 };

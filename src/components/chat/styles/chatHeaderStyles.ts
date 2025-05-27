@@ -126,9 +126,9 @@ export const chatHeaderStyles = StyleSheet.create({
     fontWeight: '600',
   },
   tabContent: {
-    minHeight: 120,
-    maxHeight: 140, // Controlled height to prevent overflow
-    paddingVertical: 8,
+    minHeight: 140,
+    maxHeight: 180, // Increased height to accommodate text properly
+    paddingVertical: 12,
   },
   membersContainer: {
     flex: 1,
@@ -198,5 +198,26 @@ export const chatHeaderStyles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     paddingVertical: 40,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: GoldTheme.text.muted,
+    marginLeft: 8,
+    fontStyle: 'italic',
+  },
+  errorText: {
+    fontSize: 14,
+    color: GoldTheme.error || '#FF6B6B',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
   },
 });

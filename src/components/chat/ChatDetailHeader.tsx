@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,13 @@ import {
   Image,
   Alert,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Chatroom, Message } from '@/services/api';
+import { Chatroom, Message, chatAPI } from '@/services/api';
 import { GoldTheme } from '../../../constants/GoldTheme';
 import { AudioPlayer } from './AudioPlayer';
 import { VideoPlayer } from './VideoPlayer';
@@ -21,33 +22,54 @@ import { chatHeaderStyles } from './styles/chatHeaderStyles';
 
 interface ChatDetailHeaderProps {
   chatroom: Chatroom | null;
-  messages: Message[];
   onThreeDotPress?: () => void;
+  refreshTrigger?: number; // Simple trigger to refresh media (increment to refresh)
 }
 
 export function ChatDetailHeader({
   chatroom,
-  messages,
-  onThreeDotPress
+  onThreeDotPress,
+  refreshTrigger
 }: ChatDetailHeaderProps) {
   const [showContent, setShowContent] = useState(false);
   const [activeTab, setActiveTab] = useState<'members' | 'images' | 'videos' | 'audio'>('members');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [mediaMessages, setMediaMessages] = useState<Message[]>([]);
+  const [loadingMedia, setLoadingMedia] = useState(false);
+  const [mediaError, setMediaError] = useState<string | null>(null);
 
-  // Debug logging for media filtering
-  console.log('[ChatDetailHeader] Total messages:', messages.length);
-  if (messages.length > 0) {
-    console.log('[ChatDetailHeader] Sample message structure:', messages[0]);
-    console.log('[ChatDetailHeader] All message types:', messages.map(m => m.message_type));
-    console.log('[ChatDetailHeader] Messages with media:', messages.filter(m => m.media_url).map(m => ({
-      type: m.message_type,
-      url: m.media_url,
-      id: m.id
-    })));
-  }
+  // Fetch media messages when chatroom changes or when content is shown
+  useEffect(() => {
+    const fetchMediaMessages = async () => {
+      if (!chatroom?.id || !showContent) {
+        return;
+      }
 
-  // More robust filtering - handle potential field name variations and ensure media_url exists and is not empty
-  const images = messages.filter(m => {
+      setLoadingMedia(true);
+      setMediaError(null);
+
+      try {
+        console.log('[ChatDetailHeader] Fetching media for chatroom:', chatroom.id);
+        const response = await chatAPI.getChatroomMedia(chatroom.id);
+        console.log('[ChatDetailHeader] Media fetched successfully:', {
+          count: response.count,
+          messages: response.messages.length
+        });
+        setMediaMessages(response.messages);
+      } catch (error) {
+        console.error('[ChatDetailHeader] Failed to fetch media:', error);
+        setMediaError('Failed to load media');
+        setMediaMessages([]);
+      } finally {
+        setLoadingMedia(false);
+      }
+    };
+
+    fetchMediaMessages();
+  }, [chatroom?.id, showContent, refreshTrigger]); // Add refreshTrigger to dependencies
+
+  // Filter media messages by type
+  const images = mediaMessages.filter(m => {
     const hasImageType = m.message_type && (
       m.message_type.includes('picture') ||
       m.message_type === 'picture' ||
@@ -57,7 +79,7 @@ export function ChatDetailHeader({
     return hasImageType && hasMediaUrl;
   });
 
-  const videos = messages.filter(m => {
+  const videos = mediaMessages.filter(m => {
     const hasVideoType = m.message_type && (
       m.message_type.includes('video') ||
       m.message_type === 'video' ||
@@ -67,7 +89,7 @@ export function ChatDetailHeader({
     return hasVideoType && hasMediaUrl;
   });
 
-  const audios = messages.filter(m => {
+  const audios = mediaMessages.filter(m => {
     const hasAudioType = m.message_type && (
       m.message_type.includes('audio') ||
       m.message_type === 'audio' ||
@@ -77,13 +99,13 @@ export function ChatDetailHeader({
     return hasAudioType && hasMediaUrl;
   });
 
-  console.log('[ChatDetailHeader] Filtered media:', {
+  console.log('[ChatDetailHeader] Filtered media from API:', {
+    total: mediaMessages.length,
     images: images.length,
     videos: videos.length,
     audios: audios.length,
-    imageMessages: images.map(m => ({ type: m.message_type, url: m.media_url, id: m.id })),
-    videoMessages: videos.map(m => ({ type: m.message_type, url: m.media_url, id: m.id })),
-    audioMessages: audios.map(m => ({ type: m.message_type, url: m.media_url, id: m.id }))
+    loading: loadingMedia,
+    error: mediaError
   });
 
   if (!chatroom) {
@@ -268,7 +290,14 @@ export function ChatDetailHeader({
 
               {activeTab === 'images' && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={chatHeaderStyles.mediaScrollView}>
-                  {images.length > 0 ? (
+                  {loadingMedia ? (
+                    <View style={chatHeaderStyles.loadingContainer}>
+                      <ActivityIndicator size="small" color={GoldTheme.gold.primary} />
+                      <Text style={chatHeaderStyles.loadingText}>Loading images...</Text>
+                    </View>
+                  ) : mediaError ? (
+                    <Text style={chatHeaderStyles.errorText}>{mediaError}</Text>
+                  ) : images.length > 0 ? (
                     images.map((msg, index) => (
                       <TouchableOpacity
                         key={`image-${msg.id}-${index}`}
@@ -291,7 +320,14 @@ export function ChatDetailHeader({
 
               {activeTab === 'videos' && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={chatHeaderStyles.mediaScrollView}>
-                  {videos.length > 0 ? (
+                  {loadingMedia ? (
+                    <View style={chatHeaderStyles.loadingContainer}>
+                      <ActivityIndicator size="small" color={GoldTheme.gold.primary} />
+                      <Text style={chatHeaderStyles.loadingText}>Loading videos...</Text>
+                    </View>
+                  ) : mediaError ? (
+                    <Text style={chatHeaderStyles.errorText}>{mediaError}</Text>
+                  ) : videos.length > 0 ? (
                     videos.map((msg, index) => (
                       <View key={`video-${msg.id}-${index}`} style={chatHeaderStyles.mediaVideoWrap}>
                         <VideoPlayer
@@ -309,7 +345,14 @@ export function ChatDetailHeader({
 
               {activeTab === 'audio' && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={chatHeaderStyles.mediaScrollView}>
-                  {audios.length > 0 ? (
+                  {loadingMedia ? (
+                    <View style={chatHeaderStyles.loadingContainer}>
+                      <ActivityIndicator size="small" color={GoldTheme.gold.primary} />
+                      <Text style={chatHeaderStyles.loadingText}>Loading audio...</Text>
+                    </View>
+                  ) : mediaError ? (
+                    <Text style={chatHeaderStyles.errorText}>{mediaError}</Text>
+                  ) : audios.length > 0 ? (
                     audios.map((msg, index) => (
                       <View key={`audio-${msg.id}-${index}`} style={chatHeaderStyles.mediaAudioWrap}>
                         <AudioPlayer
