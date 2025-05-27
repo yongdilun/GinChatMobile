@@ -463,8 +463,12 @@ export default function ChatDetail() {
   // Create combined data structure with messages and unread divider
   const messagesWithDivider = useMemo(() => {
     if (!oldestUnreadInfo) {
-      // No unread messages, return original messages
-      return messages.map(msg => ({ type: 'message', data: msg }));
+      // No unread messages, return original messages with proper structure
+      return messages.map((msg, index) => ({
+        type: 'message',
+        data: msg,
+        id: msg.id || `message_${index}` // Ensure every item has an ID
+      }));
     }
 
     const result = [];
@@ -478,12 +482,16 @@ export default function ChatDetail() {
         result.push({
           type: 'unread_divider',
           data: { unreadCount: oldestUnreadInfo.unreadCount },
-          id: `unread_divider_${message.id}`
+          id: `unread_divider_${message.id || i}` // Ensure unique ID
         });
         dividerInserted = true;
       }
 
-      result.push({ type: 'message', data: message, id: message.id });
+      result.push({
+        type: 'message',
+        data: message,
+        id: message.id || `message_${i}` // Ensure every message has an ID
+      });
     }
 
     return result;
@@ -593,9 +601,9 @@ export default function ChatDetail() {
           ref={flatListRef}
           data={messagesWithDivider}
           renderItem={renderItem}
-          keyExtractor={(item) => {
+          keyExtractor={(item, index) => {
             // Use stable key - include item ID (either message ID or divider ID)
-            return item.id;
+            return item.id || `item_${index}`;
           }}
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContent}
