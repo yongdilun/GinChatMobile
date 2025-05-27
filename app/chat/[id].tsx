@@ -27,6 +27,7 @@ import { MessageItem } from '../../src/components/chat/MessageItem';
 import { MessageInput } from '../../src/components/chat/MessageInput';
 import { ImageModal } from '../../src/components/chat/ImageModal';
 import { UnreadMessageIndicator } from '../../src/components/chat/UnreadMessageIndicator';
+import { UnreadMessageDivider } from '../../src/components/chat/UnreadMessageDivider';
 import { useWebSocketHandler } from '../../src/hooks/useWebSocketHandler';
 import { useMediaPicker } from '../../src/hooks/useMediaPicker';
 import { useAudioRecorder } from '../../src/hooks/useAudioRecorder';
@@ -374,6 +375,52 @@ export default function ChatDetail() {
     return colors[index];
   };
 
+  // Calculate oldest unread message position (static, only updates when messages change)
+  const oldestUnreadInfo = useMemo(() => {
+    if (!messages || messages.length === 0 || !user?.id) return null;
+
+    // Sort messages by sent_at (oldest first for this calculation)
+    const sortedMessages = [...messages].sort((a, b) =>
+      new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+    );
+
+    // Find the first message that the current user hasn't read
+    for (let i = 0; i < sortedMessages.length; i++) {
+      const message = sortedMessages[i];
+
+      // Skip own messages
+      if (message.sender_id === user.id) continue;
+
+      // Check if current user has read this message
+      const userReadStatus = message.read_status?.find(
+        status => status.user_id === user.id && status.is_read === true
+      );
+
+      if (!userReadStatus) {
+        // Found the oldest unread message
+        // Find its index in the original messages array (which is sorted newest first)
+        const originalIndex = messages.findIndex(m => m.id === message.id);
+
+        // Count total unread messages
+        const unreadCount = sortedMessages.slice(i).filter(m => {
+          if (m.sender_id === user.id) return false;
+          const readStatus = m.read_status?.find(
+            status => status.user_id === user.id && status.is_read === true
+          );
+          return !readStatus;
+        }).length;
+
+        return {
+          messageId: message.id,
+          originalIndex,
+          unreadCount
+        };
+      }
+    }
+
+    return null;
+  }, [messages, user?.id]);
+
   // Memoize read status calculations to prevent unnecessary recalculations
   const readStatusCache = useMemo(() => {
     const cache = new Map();
@@ -413,6 +460,35 @@ export default function ChatDetail() {
     return cache;
   }, [messages, user?.id, chatroom?.members]);
 
+  // Create combined data structure with messages and unread divider
+  const messagesWithDivider = useMemo(() => {
+    if (!oldestUnreadInfo) {
+      // No unread messages, return original messages
+      return messages.map(msg => ({ type: 'message', data: msg }));
+    }
+
+    const result = [];
+    let dividerInserted = false;
+
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+
+      // Insert divider before the oldest unread message
+      if (!dividerInserted && message.id === oldestUnreadInfo.messageId) {
+        result.push({
+          type: 'unread_divider',
+          data: { unreadCount: oldestUnreadInfo.unreadCount },
+          id: `unread_divider_${message.id}`
+        });
+        dividerInserted = true;
+      }
+
+      result.push({ type: 'message', data: message, id: message.id });
+    }
+
+    return result;
+  }, [messages, oldestUnreadInfo]);
+
   // Get read status for messages (now uses cache)
   const getReadStatus = useCallback((message: Message) => {
     return readStatusCache.get(message.id) || { icon: '', color: 'transparent', title: '' };
@@ -448,14 +524,20 @@ export default function ChatDetail() {
     }
   };
 
-  // Render message item
-  const renderMessage = useCallback(({ item }: { item: Message }) => {
-    const isOwnMessage = item.sender_id === user?.id;
-    const userGradient = isOwnMessage ? null : getUserGradient(item.sender_name);
+  // Render message item or unread divider
+  const renderItem = useCallback(({ item }: { item: any }) => {
+    if (item.type === 'unread_divider') {
+      return <UnreadMessageDivider unreadCount={item.data.unreadCount} />;
+    }
+
+    // Regular message item
+    const message = item.data as Message;
+    const isOwnMessage = message.sender_id === user?.id;
+    const userGradient = isOwnMessage ? null : getUserGradient(message.sender_name);
 
     return (
       <MessageItem
-        item={item}
+        item={message}
         isOwnMessage={isOwnMessage}
         userGradient={userGradient}
         onImageClick={handleImageClick}
@@ -509,10 +591,10 @@ export default function ChatDetail() {
       >
         <FlatList
           ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
+          data={messagesWithDivider}
+          renderItem={renderItem}
           keyExtractor={(item) => {
-            // Use stable key - only include message ID to prevent unnecessary re-renders
+            // Use stable key - include item ID (either message ID or divider ID)
             return item.id;
           }}
           style={styles.messagesList}
