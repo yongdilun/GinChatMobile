@@ -18,6 +18,7 @@ import { GoldTheme } from '../../constants/GoldTheme';
 import { GoldButton } from '../../src/components/GoldButton';
 import { MessageActions } from '../../src/components/MessageActions';
 import { ChatroomActions } from '../../src/components/ChatroomActions';
+import { MessageInfo } from '../../src/components/chat/MessageInfo';
 
 // Import our extracted components
 import { AudioPlayer } from '../../src/components/chat/AudioPlayer';
@@ -71,6 +72,8 @@ export default function ChatDetail() {
   const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
   const [showChatroomActions, setShowChatroomActions] = useState(false);
   const [showUnreadIndicator, setShowUnreadIndicator] = useState(true);
+  const [showMessageInfo, setShowMessageInfo] = useState(false);
+  const [messageInfoData, setMessageInfoData] = useState<Message | null>(null);
 
   // Ref to track if we've already marked messages as read for this session
   const hasMarkedAsReadRef = useRef(false);
@@ -538,9 +541,13 @@ export default function ChatDetail() {
 
   // Handle message long press
   const handleMessageLongPress = (message: Message) => {
-    if (message.sender_id === user?.id) {
-      setSelectedMessage(message);
-    }
+    setSelectedMessage(message);
+  };
+
+  // Handle message info
+  const handleMessageInfo = (message: Message) => {
+    setMessageInfoData(message);
+    setShowMessageInfo(true);
   };
 
   // Handle image click
@@ -747,7 +754,20 @@ export default function ChatDetail() {
               Alert.alert('Error', 'Failed to delete message. Please try again.');
             }
           }}
+          onInfo={() => handleMessageInfo(selectedMessage)}
           currentUserId={user.id}
+        />
+      )}
+
+      {/* Message Info Modal */}
+      {messageInfoData && (
+        <MessageInfo
+          message={messageInfoData}
+          isVisible={showMessageInfo}
+          onClose={() => {
+            setShowMessageInfo(false);
+            setMessageInfoData(null);
+          }}
         />
       )}
 
@@ -759,12 +779,16 @@ export default function ChatDetail() {
           onClose={() => setShowChatroomActions(false)}
           onDelete={async (chatroomId: string) => {
             try {
-              // TODO: Implement chatroom delete API call
-              console.log('Delete chatroom:', chatroomId);
+              console.log('[Chat] 🗑️ Deleting chatroom:', chatroomId);
+              await chatAPI.deleteChatroom(chatroomId);
+              console.log('[Chat] ✅ Chatroom deleted successfully');
               setShowChatroomActions(false);
+              // Navigate back to chats list
               router.back();
-            } catch (error) {
-              console.error('Failed to delete chatroom:', error);
+            } catch (error: any) {
+              console.error('[Chat] ❌ Failed to delete chatroom:', error);
+              const errorMessage = error.response?.data?.error || error.message || 'Failed to delete chatroom';
+              throw new Error(errorMessage);
             }
           }}
           currentUserId={user.id}

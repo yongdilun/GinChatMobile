@@ -21,6 +21,7 @@ interface MessageActionsProps {
   onClose: () => void;
   onEdit: (messageId: string, newText: string, newMediaUrl?: string, newMessageType?: string) => Promise<void>;
   onDelete: (messageId: string) => Promise<void>;
+  onInfo: () => void;
   currentUserId: number;
 }
 
@@ -30,6 +31,7 @@ export function MessageActions({
   onClose,
   onEdit,
   onDelete,
+  onInfo,
   currentUserId,
 }: MessageActionsProps) {
   const [showEditModal, setShowEditModal] = useState(false);
@@ -160,31 +162,51 @@ export function MessageActions({
               colors={[GoldTheme.background.card, GoldTheme.background.secondary]}
               style={styles.actionsGradient}
             >
+              {/* Info Action - Always available */}
               <TouchableOpacity
                 style={styles.actionItem}
-                onPress={handleEdit}
+                onPress={() => {
+                  onInfo();
+                  onClose();
+                }}
                 disabled={isDeleting}
               >
-                <Ionicons name="create-outline" size={20} color={GoldTheme.gold.primary} />
-                <Text style={styles.actionText}>Edit Message</Text>
+                <Ionicons name="information-circle-outline" size={20} color={GoldTheme.gold.primary} />
+                <Text style={styles.actionText}>Message Info</Text>
               </TouchableOpacity>
 
-              <View style={styles.actionSeparator} />
+              {/* Edit and Delete - Only for own messages */}
+              {canModify && (
+                <>
+                  <View style={styles.actionSeparator} />
 
-              <TouchableOpacity
-                style={styles.actionItem}
-                onPress={handleDelete}
-                disabled={isDeleting}
-              >
-                {isDeleting ? (
-                  <ActivityIndicator size="small" color={GoldTheme.status.error} />
-                ) : (
-                  <Ionicons name="trash-outline" size={20} color={GoldTheme.status.error} />
-                )}
-                <Text style={[styles.actionText, { color: GoldTheme.status.error }]}>
-                  Delete Message
-                </Text>
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionItem}
+                    onPress={handleEdit}
+                    disabled={isDeleting}
+                  >
+                    <Ionicons name="create-outline" size={20} color={GoldTheme.gold.primary} />
+                    <Text style={styles.actionText}>Edit Message</Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.actionSeparator} />
+
+                  <TouchableOpacity
+                    style={styles.actionItem}
+                    onPress={handleDelete}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <ActivityIndicator size="small" color={GoldTheme.status.error} />
+                    ) : (
+                      <Ionicons name="trash-outline" size={20} color={GoldTheme.status.error} />
+                    )}
+                    <Text style={[styles.actionText, { color: GoldTheme.status.error }]}>
+                      Delete Message
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </LinearGradient>
           </View>
         </TouchableOpacity>
