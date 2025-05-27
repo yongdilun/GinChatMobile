@@ -43,6 +43,7 @@ export default function ChatDetail() {
   const { id: chatroomId } = useLocalSearchParams<{ id: string }>();
   const { user, token } = useAuth();
   const flatListRef = useRef<FlatList>(null);
+  const hasAutoScrolledRef = useRef(false);
 
   // State management
   const [chatroom, setChatroom] = useState<Chatroom | null>(null);
@@ -238,6 +239,8 @@ export default function ChatDetail() {
   useEffect(() => {
     // Reset the mark-as-read flag when entering a new chatroom
     hasMarkedAsReadRef.current = false;
+    // Reset the auto-scroll flag when entering a new chatroom
+    hasAutoScrolledRef.current = false;
     // Reset messages for new chatroom (this also resets unread divider position)
     resetMessages();
     loadChatroomData();
@@ -294,6 +297,8 @@ export default function ChatDetail() {
       setShowUnreadIndicator(true);
     }
   }, [messages, user?.id, hasMore]);
+
+
 
   // Send message function
   const sendMessage = async () => {
@@ -481,6 +486,64 @@ export default function ChatDetail() {
 
     return result;
   }, [messages, firstUnreadMessageId, unreadCount]);
+
+  // Auto-scroll to unread message divider when entering chat room
+  useEffect(() => {
+    // Only auto-scroll once when entering the room and if there are unread messages
+    if (!firstUnreadMessageId || !messagesWithDivider.length || !flatListRef.current || hasAutoScrolledRef.current) {
+      return;
+    }
+
+    // Find the index of the fixed unread divider in the messagesWithDivider array
+    const dividerIndex = messagesWithDivider.findIndex(item =>
+      item.type === 'fixed_unread_divider'
+    );
+
+    if (dividerIndex >= 0) {
+      console.log('[Chat] 🎯 Auto-scrolling to unread message divider at index:', dividerIndex);
+
+      // Mark that we've auto-scrolled to prevent multiple scrolls
+      hasAutoScrolledRef.current = true;
+
+      // Add a small delay to ensure the FlatList is fully rendered
+      const scrollTimer = setTimeout(() => {
+        try {
+          // Check if the divider is already visible on screen before scrolling
+          // For an inverted FlatList, check if the divider index is within the visible range
+          // If it's already visible, don't scroll
+          const isLikelyVisible = dividerIndex < 10; // Assume first 10 items are likely visible
+
+          if (isLikelyVisible) {
+            console.log('[Chat] ℹ️ Unread divider likely already visible, skipping auto-scroll');
+            return;
+          }
+
+          flatListRef.current?.scrollToIndex({
+            index: dividerIndex,
+            animated: true,
+            viewPosition: 0.5, // Center the divider on screen
+          });
+          console.log('[Chat] ✅ Auto-scrolled to unread message divider');
+        } catch (error) {
+          console.warn('[Chat] ⚠️ Failed to auto-scroll to unread divider:', error);
+          // Fallback: scroll to the message before the divider
+          if (dividerIndex > 0) {
+            try {
+              flatListRef.current?.scrollToIndex({
+                index: dividerIndex - 1,
+                animated: true,
+                viewPosition: 0.3,
+              });
+            } catch (fallbackError) {
+              console.warn('[Chat] ⚠️ Fallback scroll also failed:', fallbackError);
+            }
+          }
+        }
+      }, 500); // Wait 500ms for messages to be fully loaded and rendered
+
+      return () => clearTimeout(scrollTimer);
+    }
+  }, [firstUnreadMessageId, messagesWithDivider.length]); // Only trigger when these change
 
   // Get read status for messages (now uses cache)
   const getReadStatus = useCallback((message: Message) => {

@@ -182,11 +182,48 @@ export function useWebSocketHandler({
       } else if (messageType === 'new_message' || messageType === 'chat_message') {
         // Handle new message with optimistic updates
         console.log('[Chat] 📝 New message received');
-        const messageData = newMessage.data as Message;
+        let messageData = newMessage.data as Message;
 
         if (messageData.id && !processedMessages.current.has(messageData.id)) {
           processedMessages.current.add(messageData.id);
 
+          // Auto-mark new messages as read BEFORE adding to list if from others and user is in chatroom
+          if (messageData.sender_id !== user?.id && messageData.id) {
+            console.log('[Chat] 🚀 Pre-marking new message as read to prevent unread label flicker:', messageData.id);
+
+            // Add read status to message immediately to prevent unread label from showing
+            const currentReadStatus = messageData.read_status || [];
+            const userAlreadyRead = currentReadStatus.find(status => status.user_id === user?.id && status.is_read);
+
+            if (!userAlreadyRead) {
+              messageData = {
+                ...messageData,
+                read_status: [
+                  ...currentReadStatus,
+                  {
+                    user_id: user.id,
+                    username: user.email || 'User',
+                    read_at: new Date().toISOString(),
+                    is_read: true
+                  }
+                ]
+              };
+            }
+
+            // Mark as read via API in background (non-blocking)
+            chatAPI.markSingleMessageAsRead(messageData.id).then((response) => {
+              if (response) {
+                console.log('[Chat] ✅ Message auto-marked as read via WebSocket API, notification sent to other users');
+              } else {
+                console.log('[Chat] ⚠️ Message auto-read API failed silently (non-critical)');
+              }
+            }).catch((error) => {
+              console.error('[Chat] ❌ Failed to auto-mark message as read via WebSocket API:', error);
+              // Don't throw error - auto-read failures should be silent
+            });
+          }
+
+          // Add message to list (now with read status already set if applicable)
           if (addNewMessage) {
             // Use the hook function if available (preferred for paginated messages)
             addNewMessage(messageData);
@@ -199,23 +236,6 @@ export function useWebSocketHandler({
                 return updatedMessages.sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
               }
               return prevMessages;
-            });
-          }
-
-          // Auto-mark new messages as read if from others and user is in chatroom
-          if (messageData.sender_id !== user?.id && messageData.id) {
-            console.log('[Chat] 🚀 Auto-marking new message as read via WebSocket:', messageData.id);
-
-            // Use the new single message auto-read API (this will also send WebSocket notification to other users)
-            chatAPI.markSingleMessageAsRead(messageData.id).then((response) => {
-              if (response) {
-                console.log('[Chat] ✅ Message auto-marked as read via WebSocket, notification sent to other users');
-              } else {
-                console.log('[Chat] ⚠️ Message auto-read failed silently (non-critical)');
-              }
-            }).catch((error) => {
-              console.error('[Chat] ❌ Failed to auto-mark message as read via WebSocket:', error);
-              // Don't throw error - auto-read failures should be silent
             });
           }
         }
