@@ -53,7 +53,7 @@ interface AppWebSocketMessage {
 
 export default function ChatDetail() {
   const { id: chatroomId } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const flatListRef = useRef<FlatList>(null);
 
   // State management
@@ -95,8 +95,9 @@ export default function ChatDetail() {
             // Add new read status
             updatedReadStatus.push({
               user_id: user.id,
-              username: user.username,
-              read_at: new Date().toISOString()
+              username: user.email || 'User',
+              read_at: new Date().toISOString(),
+              is_read: true
             });
           }
 
@@ -111,7 +112,7 @@ export default function ChatDetail() {
       const response = await fetch(`${API_URL}/messages/read`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.access_token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ message_id: messageId }),
@@ -133,7 +134,7 @@ export default function ChatDetail() {
     } catch (error) {
       console.error('[Chat] ❌ Error marking message as read:', error);
     }
-  }, [user?.id, user?.username, user?.access_token]);
+  }, [user?.id, user?.email, token]);
 
   // WebSocket handler
   const { processedMessages } = useWebSocketHandler({
@@ -161,8 +162,9 @@ export default function ChatDetail() {
             if (existingReadIndex === -1) {
               updatedReadStatus.push({
                 user_id: user.id,
-                username: user.username,
-                read_at: new Date().toISOString()
+                username: user.email || 'User',
+                read_at: new Date().toISOString(),
+                is_read: true
               });
             }
 
@@ -175,7 +177,7 @@ export default function ChatDetail() {
       const response = await fetch(`${API_URL}/chatrooms/${chatroomId}/mark-all-read`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.access_token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -192,20 +194,27 @@ export default function ChatDetail() {
 
   // Load chatroom and messages
   const loadChatroomData = async () => {
-    if (!chatroomId || !user?.access_token) return;
+    if (!chatroomId || !token) return;
 
     try {
       setLoading(true);
 
       // Load chatroom details
-      const chatroomResponse = await chatAPI.getChatroom(chatroomId);
-      setChatroom(chatroomResponse);
+      const chatroomResponse = await chatAPI.getConversationById(chatroomId);
+      setChatroom(chatroomResponse.chatroom);
 
       // Load messages
       const messagesResponse = await chatAPI.getMessages(chatroomId);
-      const sortedMessages = messagesResponse.sort((a, b) =>
-        new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
-      );
+      console.log('[Chat] Messages response:', messagesResponse);
+
+      // Handle the case where messages might be null or in a different format
+      const messagesList = messagesResponse?.messages || messagesResponse || [];
+      const sortedMessages = Array.isArray(messagesList)
+        ? messagesList.sort((a: Message, b: Message) =>
+            new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
+          )
+        : [];
+
       setMessages(sortedMessages);
 
       // Mark all messages as read when entering chat
@@ -224,17 +233,17 @@ export default function ChatDetail() {
   // Load data on mount and when chatroomId changes
   useEffect(() => {
     loadChatroomData();
-  }, [chatroomId, user?.access_token]);
+  }, [chatroomId, token]);
 
   // Focus effect to mark messages as read when returning to chat
   useFocusEffect(
     useCallback(() => {
-      if (chatroomId && user?.access_token) {
+      if (chatroomId && token) {
         setTimeout(() => {
           markAllMessagesAsRead();
         }, 300);
       }
-    }, [chatroomId, user?.access_token])
+    }, [chatroomId, token])
   );
 
   // Send message function
@@ -275,13 +284,12 @@ export default function ChatDetail() {
       }
 
       const messageData = {
-        chatroom_id: chatroomId!,
-        text_content: messageText.trim() || null,
-        media_url: mediaUrl,
+        text_content: messageText.trim() || undefined,
+        media_url: mediaUrl || undefined,
         message_type: messageType,
       };
 
-      await chatAPI.sendMessage(messageData);
+      await chatAPI.sendMessage(chatroomId!, messageData);
 
       // Clear input
       setMessageText('');
@@ -444,24 +452,44 @@ export default function ChatDetail() {
           message={selectedMessage}
           visible={!!selectedMessage}
           onClose={() => setSelectedMessage(null)}
-          onEdit={(editedText) => {
+          onEdit={async (messageId: string, newText: string, newMediaUrl?: string, newMessageType?: string) => {
             // Handle message edit
-            setSelectedMessage(null);
+            try {
+              // TODO: Implement message edit API call
+              console.log('Edit message:', messageId, newText);
+              setSelectedMessage(null);
+            } catch (error) {
+              console.error('Failed to edit message:', error);
+            }
           }}
-          onDelete={() => {
+          onDelete={async (messageId: string) => {
             // Handle message delete
-            setSelectedMessage(null);
+            try {
+              // TODO: Implement message delete API call
+              console.log('Delete message:', messageId);
+              setSelectedMessage(null);
+            } catch (error) {
+              console.error('Failed to delete message:', error);
+            }
           }}
         />
       )}
 
       {/* Chatroom Actions */}
-      <ChatroomActions
-        chatroom={chatroom}
-        onDelete={() => {
-          router.back();
-        }}
-      />
+      {chatroom && (
+        <ChatroomActions
+          chatroom={chatroom}
+          onDelete={async (chatroomId: string) => {
+            try {
+              // TODO: Implement chatroom delete API call
+              console.log('Delete chatroom:', chatroomId);
+              router.back();
+            } catch (error) {
+              console.error('Failed to delete chatroom:', error);
+            }
+          }}
+        />
+      )}
     </View>
   );
 }
