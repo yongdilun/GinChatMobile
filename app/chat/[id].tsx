@@ -30,6 +30,7 @@ import { ImageModal } from '../../src/components/chat/ImageModal';
 import { UnreadMessageIndicator } from '../../src/components/chat/UnreadMessageIndicator';
 import { UnreadMessageDivider } from '../../src/components/chat/UnreadMessageDivider';
 import { useWebSocketHandler } from '../../src/hooks/useWebSocketHandler';
+import { usePaginatedMessages } from '../../src/hooks/usePaginatedMessages';
 import { useMediaPicker } from '../../src/hooks/useMediaPicker';
 import { useAudioRecorder } from '../../src/hooks/useAudioRecorder';
 
@@ -62,11 +63,26 @@ export default function ChatDetail() {
 
   // State management
   const [chatroom, setChatroom] = useState<Chatroom | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
-  const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Use paginated messages hook
+  const {
+    messages,
+    hasMore,
+    unreadCount,
+    totalCount,
+    loading,
+    loadingMore,
+    error: messagesError,
+    loadInitialMessages,
+    loadMoreMessages,
+    addNewMessage,
+    updateMessage,
+    removeMessage,
+    reset: resetMessages,
+  } = usePaginatedMessages(chatroomId || '');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
@@ -104,30 +120,25 @@ export default function ChatDetail() {
 
     console.log('[Chat] 🚀 Optimistic mark message as read:', messageId);
 
+    // Find the message to update
+    const messageToUpdate = messages.find(msg => msg.id === messageId);
+    if (!messageToUpdate) return;
+
     // Optimistic update - mark message as read immediately in UI
-    setMessages(prevMessages =>
-      prevMessages.map(msg => {
-        if (msg.id === messageId) {
-          const updatedReadStatus = msg.read_status ? [...msg.read_status] : [];
+    const updatedReadStatus = messageToUpdate.read_status ? [...messageToUpdate.read_status] : [];
+    const existingReadIndex = updatedReadStatus.findIndex(rs => rs.user_id === user.id);
 
-          // Check if user already read this message
-          const existingReadIndex = updatedReadStatus.findIndex(rs => rs.user_id === user.id);
+    if (existingReadIndex === -1) {
+      // Add new read status
+      updatedReadStatus.push({
+        user_id: user.id,
+        username: user.email || 'User',
+        read_at: new Date().toISOString(),
+        is_read: true
+      });
 
-          if (existingReadIndex === -1) {
-            // Add new read status
-            updatedReadStatus.push({
-              user_id: user.id,
-              username: user.email || 'User',
-              read_at: new Date().toISOString(),
-              is_read: true
-            });
-          }
-
-          return { ...msg, read_status: updatedReadStatus };
-        }
-        return msg;
-      })
-    );
+      updateMessage(messageId, { read_status: updatedReadStatus });
+    }
 
     // Make API call
     try {
@@ -143,25 +154,30 @@ export default function ChatDetail() {
       if (!response.ok) {
         console.error('[Chat] ❌ Failed to mark message as read:', response.status);
         // Revert optimistic update on failure
-        setMessages(prevMessages =>
-          prevMessages.map(msg => {
-            if (msg.id === messageId) {
-              const revertedReadStatus = msg.read_status?.filter(rs => rs.user_id !== user.id) || [];
-              return { ...msg, read_status: revertedReadStatus };
-            }
-            return msg;
-          })
-        );
+        const revertedReadStatus = messageToUpdate.read_status?.filter(rs => rs.user_id !== user.id) || [];
+        updateMessage(messageId, { read_status: revertedReadStatus });
       }
     } catch (error) {
       console.error('[Chat] ❌ Error marking message as read:', error);
     }
-  }, [user?.id, user?.email, token]);
+  }, [user?.id, user?.email, token, messages, updateMessage]);
 
-  // WebSocket handler
+  // WebSocket handler - create a custom setMessages function for compatibility
+  const setMessagesForWebSocket = useCallback((updater: React.SetStateAction<Message[]>) => {
+    if (typeof updater === 'function') {
+      const newMessages = updater(messages);
+      // Handle new messages from WebSocket
+      if (newMessages.length > messages.length) {
+        const newestMessage = newMessages[newMessages.length - 1];
+        addNewMessage(newestMessage);
+      }
+    }
+    console.log('[Chat] WebSocket message update received');
+  }, [messages, addNewMessage]);
+
   const { processedMessages } = useWebSocketHandler({
     chatroomId,
-    setMessages,
+    setMessages: setMessagesForWebSocket,
     markMessageAsRead,
   });
 
@@ -174,27 +190,24 @@ export default function ChatDetail() {
     setIsMarkingAsRead(true);
 
     try {
-      // Optimistic update - mark all messages as read immediately
-      setMessages(prevMessages =>
-        prevMessages.map(msg => {
-          if (msg.sender_id !== user.id) {
-            const updatedReadStatus = msg.read_status ? [...msg.read_status] : [];
-            const existingReadIndex = updatedReadStatus.findIndex(rs => rs.user_id === user.id);
+      // Optimistic update - mark all messages as read immediately using the hook
+      messages.forEach(msg => {
+        if (msg.sender_id !== user.id) {
+          const updatedReadStatus = msg.read_status ? [...msg.read_status] : [];
+          const existingReadIndex = updatedReadStatus.findIndex(rs => rs.user_id === user.id);
 
-            if (existingReadIndex === -1) {
-              updatedReadStatus.push({
-                user_id: user.id,
-                username: user.email || 'User',
-                read_at: new Date().toISOString(),
-                is_read: true
-              });
-            }
+          if (existingReadIndex === -1) {
+            updatedReadStatus.push({
+              user_id: user.id,
+              username: user.email || 'User',
+              read_at: new Date().toISOString(),
+              is_read: true
+            });
 
-            return { ...msg, read_status: updatedReadStatus };
+            updateMessage(msg.id, { read_status: updatedReadStatus });
           }
-          return msg;
-        })
-      );
+        }
+      });
 
       const response = await fetch(`${API_URL}/chatrooms/${chatroomId}/mark-all-read`, {
         method: 'POST',
@@ -219,36 +232,17 @@ export default function ChatDetail() {
     if (!chatroomId || !token) return;
 
     try {
-      setLoading(true);
-
       // Load chatroom details
       const chatroomResponse = await chatAPI.getConversationById(chatroomId);
       setChatroom(chatroomResponse.chatroom);
       console.log('[Chat] 📋 Loaded chatroom:', chatroomResponse.chatroom);
 
-      // Load messages
-      const messagesResponse = await chatAPI.getMessages(chatroomId);
-      console.log('[Chat] 📨 Messages response:', messagesResponse);
-
-      // Handle the case where messages might be null or in a different format
-      const messagesList = messagesResponse?.messages || messagesResponse || [];
-      const sortedMessages = Array.isArray(messagesList)
-        ? messagesList.sort((a: Message, b: Message) =>
-            new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
-          )
-        : [];
-
-      console.log('[Chat] 📨 Processed messages:', sortedMessages.map(m => ({
-        id: m.id,
-        sender_id: m.sender_id,
-        text_content: m.text_content?.substring(0, 50),
-        read_status: m.read_status
-      })));
-
-      setMessages(sortedMessages);
+      // Load messages using the new paginated system
+      await loadInitialMessages();
+      console.log('[Chat] 📨 Loaded paginated messages');
 
       // Calculate static unread info only on initial load (not affected by WebSocket updates)
-      const unreadInfo = calculateUnreadInfo(sortedMessages, user?.id);
+      const unreadInfo = calculateUnreadInfo(messages, user?.id);
       setStaticUnreadInfo(unreadInfo);
       console.log('[Chat] 📍 Static unread info calculated:', unreadInfo);
 
@@ -258,10 +252,8 @@ export default function ChatDetail() {
     } catch (error) {
       console.error('[Chat] Error loading chatroom data:', error);
       Alert.alert('Error', 'Failed to load chat data');
-    } finally {
-      setLoading(false);
     }
-  }, [chatroomId, token]); // Only essential dependencies to prevent infinite loops
+  }, [chatroomId, token, loadInitialMessages, messages, user?.id]); // Only essential dependencies to prevent infinite loops
 
   // Load data on mount and when chatroomId changes
   useEffect(() => {
@@ -269,6 +261,8 @@ export default function ChatDetail() {
     hasMarkedAsReadRef.current = false;
     // Reset static unread info when entering new chatroom
     setStaticUnreadInfo(null);
+    // Reset messages for new chatroom
+    resetMessages();
     loadChatroomData();
 
     // Cleanup function - mark as read when leaving if not already marked
@@ -280,7 +274,7 @@ export default function ChatDetail() {
         markAllMessagesAsRead();
       }
     };
-  }, [chatroomId, token]); // Removed user?.id and markAllMessagesAsRead to prevent infinite loop
+  }, [chatroomId, token, resetMessages]); // Added resetMessages dependency
 
   // Auto-mark messages as read when entering the chat room (immediate with debounce)
   useEffect(() => {
@@ -651,10 +645,24 @@ export default function ChatDetail() {
           showsVerticalScrollIndicator={false}
           inverted
           onEndReachedThreshold={0.1}
+          onEndReached={() => {
+            // Load more messages when scrolling to top (since list is inverted)
+            if (hasMore && !loadingMore) {
+              console.log('[Chat] 📄 Loading more messages...');
+              loadMoreMessages();
+            }
+          }}
           onScrollToIndexFailed={(info) => {
             // Handle scroll index failed
             console.warn('Scroll to index failed:', info);
           }}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={{ padding: 16, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={GoldTheme.gold.primary} />
+              </View>
+            ) : null
+          }
         />
 
         {/* Unread Message Indicator */}
@@ -713,20 +721,13 @@ export default function ChatDetail() {
 
               await chatAPI.updateMessage(chatroomId!, messageId, updateData);
 
-              // Update local state optimistically
-              setMessages(prevMessages =>
-                prevMessages.map(msg =>
-                  msg.id === messageId
-                    ? {
-                        ...msg,
-                        text_content: newText,
-                        media_url: newMediaUrl,
-                        message_type: newMessageType as any,
-                        edited: true,
-                      }
-                    : msg
-                )
-              );
+              // Update local state optimistically using the hook
+              updateMessage(messageId, {
+                text_content: newText,
+                media_url: newMediaUrl,
+                message_type: newMessageType as any,
+                edited: true,
+              });
 
               console.log('[Chat] ✅ Message edited successfully');
               setSelectedMessage(null);
@@ -742,10 +743,8 @@ export default function ChatDetail() {
 
               await chatAPI.deleteMessage(chatroomId!, messageId);
 
-              // Remove from local state optimistically
-              setMessages(prevMessages =>
-                prevMessages.filter(msg => msg.id !== messageId)
-              );
+              // Remove from local state optimistically using the hook
+              removeMessage(messageId);
 
               console.log('[Chat] ✅ Message deleted successfully');
               setSelectedMessage(null);

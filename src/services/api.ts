@@ -640,6 +640,55 @@ export const chatAPI = {
     }
   },
 
+  // New paginated messages API for mobile optimization
+  getMessagesPaginated: async (
+    conversationId: string,
+    options?: {
+      limit?: number;
+      before?: string;
+      after?: string;
+    }
+  ): Promise<{
+    messages: Message[];
+    has_more: boolean;
+    next_cursor?: string;
+    unread_count: number;
+    total_count: number;
+  }> => {
+    try {
+      const params = new URLSearchParams();
+      if (options?.limit) params.append('limit', options.limit.toString());
+      if (options?.before) params.append('before', options.before);
+      if (options?.after) params.append('after', options.after);
+
+      const queryString = params.toString();
+      const url = `/chatrooms/${conversationId}/messages/paginated${queryString ? `?${queryString}` : ''}`;
+
+      console.log(`[API] Fetching paginated messages for conversation ${conversationId}`, options);
+      const response = await api.get(url);
+      console.log(`[API] Successfully fetched paginated messages for ${conversationId}:`, {
+        messageCount: response.data.messages?.length || 0,
+        hasMore: response.data.has_more,
+        unreadCount: response.data.unread_count,
+        totalCount: response.data.total_count
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`[API] Failed to fetch paginated messages for ${conversationId}:`, error);
+      if (axios.isAxiosError(error)) {
+        console.error('[API] Error status:', error.response?.status);
+        console.error('[API] Error data:', error.response?.data);
+      }
+      // Return empty response to avoid crashes
+      return {
+        messages: [],
+        has_more: false,
+        unread_count: 0,
+        total_count: 0
+      };
+    }
+  },
+
   updateMessage: async (conversationId: string, messageId: string, updates: {
     text_content?: string;
     media_url?: string;
