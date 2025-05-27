@@ -126,6 +126,17 @@ export default function ChatsScreen() {
     };
   }, []);
 
+  // Remove sidebar handler when navigating to a chat room
+  useEffect(() => {
+    if (currentRoomId && currentRoomId !== 'global_sidebar') {
+      console.log('[ChatsScreen] 🔌 Chat room active, removing sidebar message handler to prevent conflicts');
+      removeMessageHandler(handleWebSocketMessage);
+    } else if (currentRoomId === 'global_sidebar') {
+      console.log('[ChatsScreen] 🔌 Back to sidebar, re-adding message handler');
+      addMessageHandler(handleWebSocketMessage);
+    }
+  }, [currentRoomId]);
+
   useEffect(() => {
     fetchChatrooms();
   }, []);
