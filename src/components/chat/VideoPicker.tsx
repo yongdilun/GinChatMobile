@@ -10,6 +10,25 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { GoldTheme } from '../../../constants/GoldTheme';
 
+// Compatibility layer for different expo-image-picker versions
+const getMediaTypes = () => {
+  if (ImagePicker.MediaType) {
+    return {
+      Videos: [ImagePicker.MediaType.Videos],
+    };
+  } else if (ImagePicker.MediaTypeOptions) {
+    return {
+      Videos: ImagePicker.MediaTypeOptions.Videos,
+    };
+  } else {
+    return {
+      Videos: 'Videos',
+    };
+  }
+};
+
+const MediaTypes = getMediaTypes();
+
 interface VideoPickerProps {
   onVideoSelected: (video: {
     uri: string;
@@ -41,11 +60,11 @@ export function VideoPicker({ onVideoSelected, disabled = false }: VideoPickerPr
       }
 
       const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: [ImagePicker.MediaType.Videos],
+        mediaTypes: MediaTypes.Videos,
         allowsEditing: true,
         quality: 0.8,
         videoMaxDuration: 60, // 60 seconds max
-        videoQuality: ImagePicker.VideoQuality.Medium,
+        videoQuality: ImagePicker.VideoQuality?.Medium || 1,
       };
 
       let result;
@@ -57,7 +76,7 @@ export function VideoPicker({ onVideoSelected, disabled = false }: VideoPickerPr
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        
+
         // Validate that it's actually a video
         if (asset.type !== 'video') {
           Alert.alert('Invalid Selection', 'Please select a video file.');
@@ -114,10 +133,10 @@ export function VideoPicker({ onVideoSelected, disabled = false }: VideoPickerPr
       disabled={disabled}
       activeOpacity={0.7}
     >
-      <Ionicons 
-        name="videocam" 
-        size={20} 
-        color={disabled ? GoldTheme.text.muted : GoldTheme.gold.primary} 
+      <Ionicons
+        name="videocam"
+        size={20}
+        color={disabled ? GoldTheme.text.muted : GoldTheme.gold.primary}
       />
       <Text style={[styles.buttonText, disabled && styles.disabledText]}>
         Video

@@ -3,6 +3,33 @@ import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 
+// Compatibility layer for different expo-image-picker versions
+const getMediaTypes = () => {
+  // Try new API first, fallback to old API
+  if (ImagePicker.MediaType) {
+    return {
+      All: [ImagePicker.MediaType.Images, ImagePicker.MediaType.Videos],
+      Images: [ImagePicker.MediaType.Images],
+      Videos: [ImagePicker.MediaType.Videos],
+    };
+  } else if (ImagePicker.MediaTypeOptions) {
+    return {
+      All: ImagePicker.MediaTypeOptions.All,
+      Images: ImagePicker.MediaTypeOptions.Images,
+      Videos: ImagePicker.MediaTypeOptions.Videos,
+    };
+  } else {
+    // Fallback for very old versions
+    return {
+      All: 'All',
+      Images: 'Images',
+      Videos: 'Videos',
+    };
+  }
+};
+
+const MediaTypes = getMediaTypes();
+
 export interface SelectedMediaType {
   uri: string;
   type: 'image' | 'video' | 'audio';
@@ -228,7 +255,7 @@ export function useMediaPicker() {
   const pickFromCamera = async () => {
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: [ImagePicker.MediaType.Images, ImagePicker.MediaType.Videos],
+        mediaTypes: MediaTypes.All,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -255,7 +282,7 @@ export function useMediaPicker() {
   const pickFromGallery = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [ImagePicker.MediaType.Images, ImagePicker.MediaType.Videos],
+        mediaTypes: MediaTypes.All,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,

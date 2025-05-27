@@ -12,6 +12,28 @@ import * as DocumentPicker from 'expo-document-picker';
 import { GoldTheme } from '../../../constants/GoldTheme';
 import { SelectedMediaType } from '../../hooks/useMediaPicker';
 
+// Compatibility layer for different expo-image-picker versions
+const getMediaTypes = () => {
+  if (ImagePicker.MediaType) {
+    return {
+      Images: [ImagePicker.MediaType.Images],
+      Videos: [ImagePicker.MediaType.Videos],
+    };
+  } else if (ImagePicker.MediaTypeOptions) {
+    return {
+      Images: ImagePicker.MediaTypeOptions.Images,
+      Videos: ImagePicker.MediaTypeOptions.Videos,
+    };
+  } else {
+    return {
+      Images: 'Images',
+      Videos: 'Videos',
+    };
+  }
+};
+
+const MediaTypes = getMediaTypes();
+
 interface MediaSelectorProps {
   onMediaSelected: (media: SelectedMediaType) => void;
   disabled?: boolean;
@@ -36,7 +58,7 @@ export function MediaSelector({ onMediaSelected, disabled = false }: MediaSelect
       }
 
       const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: [ImagePicker.MediaType.Images],
+        mediaTypes: MediaTypes.Images,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -51,7 +73,7 @@ export function MediaSelector({ onMediaSelected, disabled = false }: MediaSelect
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        
+
         const image: SelectedMediaType = {
           uri: asset.uri,
           type: 'image',
@@ -94,11 +116,11 @@ export function MediaSelector({ onMediaSelected, disabled = false }: MediaSelect
       }
 
       const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: [ImagePicker.MediaType.Videos],
+        mediaTypes: MediaTypes.Videos,
         allowsEditing: true,
         quality: 0.8,
         videoMaxDuration: 60, // 60 seconds max
-        videoQuality: ImagePicker.VideoQuality.Medium,
+        videoQuality: ImagePicker.VideoQuality?.Medium || 1,
       };
 
       let result;
@@ -110,7 +132,7 @@ export function MediaSelector({ onMediaSelected, disabled = false }: MediaSelect
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        
+
         // Validate that it's actually a video
         if (asset.type !== 'video') {
           Alert.alert('Invalid Selection', 'Please select a video file.');
@@ -157,7 +179,7 @@ export function MediaSelector({ onMediaSelected, disabled = false }: MediaSelect
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        
+
         const audio: SelectedMediaType = {
           uri: asset.uri,
           type: 'audio',
@@ -215,10 +237,10 @@ export function MediaSelector({ onMediaSelected, disabled = false }: MediaSelect
         disabled={disabled}
         activeOpacity={0.7}
       >
-        <Ionicons 
-          name="image" 
-          size={20} 
-          color={disabled ? GoldTheme.text.muted : GoldTheme.gold.primary} 
+        <Ionicons
+          name="image"
+          size={20}
+          color={disabled ? GoldTheme.text.muted : GoldTheme.gold.primary}
         />
       </TouchableOpacity>
 
@@ -229,10 +251,10 @@ export function MediaSelector({ onMediaSelected, disabled = false }: MediaSelect
         disabled={disabled}
         activeOpacity={0.7}
       >
-        <Ionicons 
-          name="videocam" 
-          size={20} 
-          color={disabled ? GoldTheme.text.muted : GoldTheme.gold.primary} 
+        <Ionicons
+          name="videocam"
+          size={20}
+          color={disabled ? GoldTheme.text.muted : GoldTheme.gold.primary}
         />
       </TouchableOpacity>
 
@@ -243,10 +265,10 @@ export function MediaSelector({ onMediaSelected, disabled = false }: MediaSelect
         disabled={disabled}
         activeOpacity={0.7}
       >
-        <Ionicons 
-          name="musical-notes" 
-          size={20} 
-          color={disabled ? GoldTheme.text.muted : GoldTheme.gold.primary} 
+        <Ionicons
+          name="musical-notes"
+          size={20}
+          color={disabled ? GoldTheme.text.muted : GoldTheme.gold.primary}
         />
       </TouchableOpacity>
     </View>
