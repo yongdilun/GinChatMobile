@@ -14,7 +14,7 @@ import { GoldTheme } from '../../constants/GoldTheme';
 
 export default function ChatsScreen() {
   const { user, logout } = useAuth();
-  const { connectToSidebar, disconnectFromRoom, addMessageHandler, removeMessageHandler, isConnected, currentRoomId } = useSimpleWebSocket();
+  const { connectToSidebar, disconnectFromRoom, disconnectFromSidebar, addMessageHandler, removeMessageHandler, isConnected, currentRoomId } = useSimpleWebSocket();
   const [chatrooms, setChatrooms] = useState<Chatroom[]>([]);
   const [availableChatrooms, setAvailableChatrooms] = useState<Chatroom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +119,7 @@ export default function ChatsScreen() {
       return () => {
         console.log('[ChatsScreen] 🔌 Component unmounting, cleaning up WebSocket');
         removeMessageHandler(handleWebSocketMessage);
-        disconnectFromRoom();
+        disconnectFromSidebar();
       };
     } else {
       console.log('[ChatsScreen] Already connected to sidebar, skipping connection');
@@ -130,10 +130,10 @@ export default function ChatsScreen() {
       removeMessageHandler(handleWebSocketMessage);
       // Don't disconnect if we're connected to a chat room
       if (currentRoomId && currentRoomId === 'global_sidebar') {
-        disconnectFromRoom();
+        disconnectFromSidebar();
       }
     };
-  }, [connectToSidebar, disconnectFromRoom, addMessageHandler, removeMessageHandler, handleWebSocketMessage, currentRoomId]);
+  }, [connectToSidebar, disconnectFromSidebar, addMessageHandler, removeMessageHandler, handleWebSocketMessage, currentRoomId]);
 
   useEffect(() => {
     fetchChatrooms();

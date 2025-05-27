@@ -17,6 +17,7 @@ interface WebSocketContextType {
   connectToRoom: (roomId: string) => void;
   connectToSidebar: () => void;
   disconnectFromRoom: () => void;
+  disconnectFromSidebar: () => void;
   addMessageHandler: (handler: (message: WebSocketMessage) => void) => void;
   removeMessageHandler: (handler: (message: WebSocketMessage) => void) => void;
   sendMessage: (data: object) => boolean;
@@ -60,11 +61,23 @@ export const SimpleWebSocketProvider: React.FC<{ children: ReactNode }> = ({ chi
   }, [connectToRoom]);
 
   const disconnectFromRoom = useCallback(() => {
-    console.log("[SimpleWebSocketContext] 🔌 Disconnecting...");
+    console.log("[SimpleWebSocketContext] 🔌 Disconnecting from room...");
     simpleWebSocketService.disconnect();
     setIsConnected(false);
     setCurrentRoomId(null);
   }, []);
+
+  const disconnectFromSidebar = useCallback(() => {
+    console.log("[SimpleWebSocketContext] 🔌 Disconnecting from sidebar...");
+    // Only disconnect if we're actually connected to the sidebar
+    if (currentRoomId === "global_sidebar") {
+      simpleWebSocketService.disconnect();
+      setIsConnected(false);
+      setCurrentRoomId(null);
+    } else {
+      console.log("[SimpleWebSocketContext] Not connected to sidebar, ignoring disconnect request");
+    }
+  }, [currentRoomId]);
 
   // Message handlers
   const addMessageHandler = useCallback((handler: (message: WebSocketMessage) => void) => {
@@ -84,11 +97,11 @@ export const SimpleWebSocketProvider: React.FC<{ children: ReactNode }> = ({ chi
     const checkConnection = () => {
       const connected = simpleWebSocketService.isConnected();
       const room = simpleWebSocketService.getCurrentRoom();
-      
+
       if (isConnected !== connected) {
         setIsConnected(connected);
       }
-      
+
       if (currentRoomId !== room) {
         setCurrentRoomId(room);
       }
@@ -113,6 +126,7 @@ export const SimpleWebSocketProvider: React.FC<{ children: ReactNode }> = ({ chi
     connectToRoom,
     connectToSidebar,
     disconnectFromRoom,
+    disconnectFromSidebar,
     addMessageHandler,
     removeMessageHandler,
     sendMessage,
