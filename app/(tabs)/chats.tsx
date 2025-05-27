@@ -34,6 +34,12 @@ export default function ChatsScreen() {
     console.log('[ChatsScreen] Received WebSocket message:', message.type);
     console.log('[ChatsScreen] Message data:', JSON.stringify(message.data));
 
+    // IMPORTANT: Completely ignore message_read events in sidebar to prevent unwanted read status updates
+    if (message.type === 'message_read') {
+      console.log('[ChatsScreen] 🚫 Ignoring message_read event in sidebar to prevent unwanted updates');
+      return;
+    }
+
     switch (message.type) {
       case 'new_message':
         console.log('[ChatsScreen] New message received, updating last message');
@@ -91,13 +97,6 @@ export default function ChatsScreen() {
         } else {
           console.warn('[ChatsScreen] Unread count update data is not an array:', message.data);
         }
-        break;
-
-      case 'message_read':
-        console.log('[ChatsScreen] Message read status update received:', message.data);
-        // Handle read status updates - these don't need to update the sidebar directly
-        // The unread_count_update event will handle the unread count changes
-        // Just log for debugging purposes
         break;
 
       default:
