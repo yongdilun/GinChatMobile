@@ -48,10 +48,10 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
 
     try {
       console.log('[usePaginatedMessages] Loading initial messages for chatroom:', chatroomId);
-      
+
       // Load initial messages (50 by default, or all unread if > 50)
       const response = await chatAPI.getMessagesPaginated(chatroomId, { limit: 50 });
-      
+
       console.log('[usePaginatedMessages] Initial load response:', {
         messageCount: response.messages.length,
         hasMore: response.has_more,
@@ -59,9 +59,9 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
         totalCount: response.total_count
       });
 
-      // Sort messages chronologically (oldest first for proper chat order)
-      const sortedMessages = response.messages.sort((a, b) => 
-        new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+      // Sort messages in reverse chronological order (newest first) for inverted FlatList
+      const sortedMessages = response.messages.sort((a, b) =>
+        new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
       );
 
       setState(prev => ({
@@ -101,11 +101,11 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
 
     try {
       console.log('[usePaginatedMessages] Loading more messages before:', state.nextCursor);
-      
+
       // Load 50 more messages before the cursor
-      const response = await chatAPI.getMessagesPaginated(chatroomId, { 
+      const response = await chatAPI.getMessagesPaginated(chatroomId, {
         limit: 50,
-        before: state.nextCursor 
+        before: state.nextCursor
       });
 
       console.log('[usePaginatedMessages] Load more response:', {
@@ -113,15 +113,15 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
         hasMore: response.has_more
       });
 
-      // Sort new messages chronologically
-      const sortedNewMessages = response.messages.sort((a, b) => 
-        new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+      // Sort new messages in reverse chronological order (newest first)
+      const sortedNewMessages = response.messages.sort((a, b) =>
+        new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
       );
 
       setState(prev => ({
         ...prev,
-        // Prepend older messages to the beginning of the array
-        messages: [...sortedNewMessages, ...prev.messages],
+        // Append older messages to the end of the array (since we're using newest first order)
+        messages: [...prev.messages, ...sortedNewMessages],
         hasMore: response.has_more,
         nextCursor: response.next_cursor,
         loadingMore: false,
@@ -145,7 +145,8 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
   const addNewMessage = useCallback((message: Message) => {
     setState(prev => ({
       ...prev,
-      messages: [...prev.messages, message],
+      // Add new message at the beginning since we're using newest first order
+      messages: [message, ...prev.messages],
       totalCount: prev.totalCount + 1,
     }));
   }, []);
@@ -153,7 +154,7 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
   const updateMessage = useCallback((messageId: string, updates: Partial<Message>) => {
     setState(prev => ({
       ...prev,
-      messages: prev.messages.map(msg => 
+      messages: prev.messages.map(msg =>
         msg.id === messageId ? { ...msg, ...updates } : msg
       ),
     }));
