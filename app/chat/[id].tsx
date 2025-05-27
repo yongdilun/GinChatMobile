@@ -28,6 +28,7 @@ import { MessageInput } from '../../src/components/chat/MessageInput';
 import { ImageModal } from '../../src/components/chat/ImageModal';
 import { useWebSocketHandler } from '../../src/hooks/useWebSocketHandler';
 import { useMediaPicker } from '../../src/hooks/useMediaPicker';
+import { useAudioRecorder } from '../../src/hooks/useAudioRecorder';
 
 // Use the same API URL as the rest of the app
 const API_URL = 'https://ginchat-14ry.onrender.com/api';
@@ -76,6 +77,17 @@ export default function ChatDetail() {
     handleRemoveMedia,
     setSelectedMedia,
   } = useMediaPicker();
+
+  // Audio recorder hook
+  const {
+    isRecorderVisible,
+    recordedAudio,
+    showRecorder,
+    hideRecorder,
+    handleRecordingComplete,
+    handleRecordingCancel,
+    clearRecording,
+  } = useAudioRecorder();
 
   // Mark message as read function
   const markMessageAsRead = useCallback(async (messageId: string) => {
@@ -257,13 +269,14 @@ export default function ChatDetail() {
 
   // Send message function
   const sendMessage = async () => {
-    if ((!messageText.trim() && !selectedMedia) || sending || isUploading) return;
+    if ((!messageText.trim() && !selectedMedia && !recordedAudio) || sending || isUploading) return;
 
     try {
       setSending(true);
       let mediaUrl: string | null = null;
       let messageType: MessageType = 'text';
 
+      // Handle selected media (images, videos, etc.)
       if (selectedMedia) {
         setIsUploading(true);
         try {
@@ -283,11 +296,39 @@ export default function ChatDetail() {
         }
       }
 
+      // Handle recorded audio
+      if (recordedAudio) {
+        setIsUploading(true);
+        try {
+          const uploadResult = await mediaAPI.uploadMedia({
+            uri: recordedAudio.uri,
+            type: 'audio/m4a',
+            name: recordedAudio.name,
+          }, 'audio');
+          mediaUrl = uploadResult.media_url;
+          messageType = 'audio';
+        } catch (uploadError) {
+          console.error('Audio upload error:', uploadError);
+          Alert.alert('Upload Failed', 'Could not upload audio. Please try again.');
+          return;
+        } finally {
+          setIsUploading(false);
+        }
+      }
+
       // Determine final message type
       if (messageText.trim() && mediaUrl) {
-        messageType = `text_and_${selectedMedia?.backendType || 'picture'}` as MessageType;
+        if (recordedAudio) {
+          messageType = 'text_and_audio';
+        } else {
+          messageType = `text_and_${selectedMedia?.backendType || 'picture'}` as MessageType;
+        }
       } else if (mediaUrl) {
-        messageType = selectedMedia?.backendType as MessageType || 'picture';
+        if (recordedAudio) {
+          messageType = 'audio';
+        } else {
+          messageType = selectedMedia?.backendType as MessageType || 'picture';
+        }
       } else {
         messageType = 'text';
       }
@@ -303,6 +344,7 @@ export default function ChatDetail() {
       // Clear input
       setMessageText('');
       setSelectedMedia(null);
+      clearRecording();
 
       // Scroll to top (newest message)
       setTimeout(() => {
@@ -484,6 +526,12 @@ export default function ChatDetail() {
         sending={sending}
         pickingMedia={pickingMedia}
         isUploading={isUploading}
+        recordedAudio={recordedAudio}
+        onStartRecording={showRecorder}
+        onRemoveAudio={clearRecording}
+        isRecorderVisible={isRecorderVisible}
+        onRecordingComplete={handleRecordingComplete}
+        onRecordingCancel={handleRecordingCancel}
       />
 
       {/* Image Modal */}
