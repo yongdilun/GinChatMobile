@@ -267,19 +267,29 @@ export default function ChatDetail() {
     // Reset static unread info when entering new chatroom
     setStaticUnreadInfo(null);
     loadChatroomData();
-  }, [chatroomId, token]);
 
-  // Auto-mark messages as read when entering the chat room (not based on screen focus)
+    // Cleanup function - mark as read when leaving if not already marked
+    return () => {
+      if (!hasMarkedAsReadRef.current && chatroomId && user?.id) {
+        console.log('[Chat] 📝 User leaving room quickly, marking messages as read on exit');
+        hasMarkedAsReadRef.current = true;
+        // Mark as read immediately when leaving (no delay)
+        markAllMessagesAsRead();
+      }
+    };
+  }, [chatroomId, token, user?.id, markAllMessagesAsRead]);
+
+  // Auto-mark messages as read when entering the chat room (immediate with debounce)
   useEffect(() => {
     if (!chatroomId || !token || !user?.id || hasMarkedAsReadRef.current) return;
 
-    // Mark messages as read after a short delay when entering the room
-    // This ensures messages are loaded first and only happens once per room entry
+    // Mark messages as read immediately when entering the room
+    // Use a shorter delay just to ensure messages are loaded, but mark quickly
     const timeoutId = setTimeout(() => {
       hasMarkedAsReadRef.current = true;
-      console.log('[Chat] 📝 User entered chat room, marking messages as read');
+      console.log('[Chat] 📝 User entered chat room, marking messages as read immediately');
       markAllMessagesAsRead();
-    }, 1500); // 1.5 second delay to ensure messages are loaded
+    }, 300); // Reduced to 300ms for faster marking
 
     return () => {
       clearTimeout(timeoutId);
