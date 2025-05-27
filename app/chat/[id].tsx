@@ -255,6 +255,11 @@ export default function ChatDetail() {
       // Note: Unread info is now calculated by the usePaginatedMessages hook
       console.log('[Chat] 📍 Fixed unread divider position set by hook');
 
+      // Hide unread indicator initially if no messages
+      if (messages.length === 0) {
+        setShowUnreadIndicator(false);
+      }
+
       // Note: Messages will be marked as read by the room entry useEffect
       // after a 1.5 second delay to ensure messages are loaded
 
@@ -262,7 +267,7 @@ export default function ChatDetail() {
       console.error('[Chat] Error loading chatroom data:', error);
       Alert.alert('Error', 'Failed to load chat data');
     }
-  }, [chatroomId, token, loadInitialMessages, messages, user?.id]); // Only essential dependencies to prevent infinite loops
+  }, [chatroomId, token, loadInitialMessages, messages.length, user?.id]); // Only essential dependencies to prevent infinite loops
 
   // Load data on mount and when chatroomId changes
   useEffect(() => {
@@ -299,6 +304,20 @@ export default function ChatDetail() {
       clearTimeout(timeoutId);
     };
   }, [chatroomId, token]); // Removed user?.id and markAllMessagesAsRead to prevent infinite loop
+
+  // Manage unread indicator visibility based on messages
+  useEffect(() => {
+    if (messages.length === 0) {
+      setShowUnreadIndicator(false);
+    } else {
+      // Only show if there are actually unread messages
+      const hasUnreadMessages = messages.some(msg =>
+        msg.sender_id !== user?.id &&
+        !msg.read_status?.find(status => status.user_id === user?.id && status.is_read)
+      );
+      setShowUnreadIndicator(hasUnreadMessages);
+    }
+  }, [messages, user?.id]);
 
   // Send message function
   const sendMessage = async () => {
@@ -655,7 +674,7 @@ export default function ChatDetail() {
         />
 
         {/* Unread Message Indicator */}
-        {user && (
+        {user && messages.length > 0 && (
           <UnreadMessageIndicator
             messages={messages}
             currentUserId={user.id}

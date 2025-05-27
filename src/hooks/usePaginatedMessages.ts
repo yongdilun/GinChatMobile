@@ -94,14 +94,17 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
       const response = await chatAPI.getMessagesPaginated(chatroomId, { limit: 50 });
 
       console.log('[usePaginatedMessages] Initial load response:', {
-        messageCount: response.messages.length,
+        messageCount: response.messages?.length || 0,
         hasMore: response.has_more,
         unreadCount: response.unread_count,
         totalCount: response.total_count
       });
 
+      // Handle case where messages is null or undefined
+      const messages = response.messages || [];
+
       // Sort messages in reverse chronological order (newest first) for inverted FlatList
-      const sortedMessages = response.messages.sort((a, b) =>
+      const sortedMessages = messages.sort((a, b) =>
         new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
       );
 
@@ -179,8 +182,11 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
         before: state.nextCursor
       });
 
+      // Handle case where messages is null or undefined
+      const messages = response.messages || [];
+
       console.log('[usePaginatedMessages] Load more response:', {
-        messageCount: response.messages.length,
+        messageCount: messages.length,
         hasMore: response.has_more,
         nextCursor: response.next_cursor,
         totalCount: response.total_count,
@@ -188,7 +194,7 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
       });
 
       // If no messages returned, we've reached the end
-      if (response.messages.length === 0) {
+      if (messages.length === 0) {
         console.log('[usePaginatedMessages] ✅ No more messages available - reached the beginning of conversation');
         setState(prev => ({
           ...prev,
@@ -206,7 +212,7 @@ export function usePaginatedMessages(chatroomId: string): UsePaginatedMessagesRe
       }
 
       // Sort new messages in reverse chronological order (newest first)
-      const sortedNewMessages = response.messages.sort((a, b) =>
+      const sortedNewMessages = messages.sort((a, b) =>
         new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
       );
 

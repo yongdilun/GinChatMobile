@@ -37,7 +37,8 @@ export function UnreadMessageIndicator({
 }: UnreadMessageIndicatorProps) {
   // Find the oldest unread message (static calculation, not affected by real-time updates)
   const oldestUnreadInfo = useMemo(() => {
-    if (!messages || messages.length === 0) return null;
+    // Don't show if no messages, not visible, or messages array is empty
+    if (!messages || messages.length === 0 || !isVisible) return null;
 
     // Sort messages by sent_at (oldest first for this calculation)
     const sortedMessages = [...messages].sort((a, b) =>
@@ -76,10 +77,10 @@ export function UnreadMessageIndicator({
     }
 
     return null;
-  }, [messages, currentUserId]);
+  }, [messages, currentUserId, isVisible]);
 
-  // Don't show if no unread messages or not visible
-  if (!oldestUnreadInfo || !isVisible) {
+  // Don't show if no unread messages, not visible, or no messages at all
+  if (!oldestUnreadInfo || !isVisible || !messages || messages.length === 0) {
     return null;
   }
 
