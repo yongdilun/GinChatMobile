@@ -2052,20 +2052,18 @@ export default function ChatDetailScreen() {
 
           // Handle individual message read status update
           if (readData.message_id && readData.read_status) {
-            // Only update if this is not the current user (to avoid duplicate updates)
-            if (readData.user_id !== user?.id) {
-              console.log('[Chat] 📝 Processing read status update for message:', readData.message_id);
+            // FIXED: Always process WebSocket read status updates
+            // The user_id in readData is the user who READ the message, not who sent it
+            // We want to see when others read our messages (blue ticks)
+            console.log('[Chat] 📝 Processing read status update for message:', readData.message_id, '(reader:', readData.user_id, ')');
 
-              setMessages(prevMessages =>
-                prevMessages.map(msg =>
-                  msg.id === readData.message_id
-                    ? { ...msg, read_status: readData.read_status }
-                    : msg
-                )
-              );
-            } else {
-              console.log('[Chat] 📝 Skipping read status update for current user (already updated optimistically)');
-            }
+            setMessages(prevMessages =>
+              prevMessages.map(msg =>
+                msg.id === readData.message_id
+                  ? { ...msg, read_status: readData.read_status }
+                  : msg
+              )
+            );
           }
         } else {
           console.log('[Chat] 📝 Ignoring read status update for different chatroom:', newMessage.chatroom_id, 'vs current:', chatroomId);
