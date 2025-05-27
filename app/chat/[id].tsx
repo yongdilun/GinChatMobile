@@ -144,8 +144,9 @@ export default function ChatDetail() {
       updateMessage(messageId, { read_status: updatedReadStatus });
     }
 
-    // Make API call
+    // Make API call (this will also send WebSocket notification to other users)
     try {
+      console.log('[Chat] 📤 Sending mark-as-read API request for message:', messageId);
       const response = await fetch(`${API_URL}/messages/read`, {
         method: 'POST',
         headers: {
@@ -160,6 +161,8 @@ export default function ChatDetail() {
         // Revert optimistic update on failure
         const revertedReadStatus = messageToUpdate.read_status?.filter(rs => rs.user_id !== user.id) || [];
         updateMessage(messageId, { read_status: revertedReadStatus });
+      } else {
+        console.log('[Chat] ✅ Message marked as read successfully, WebSocket notification sent to other users');
       }
     } catch (error) {
       console.error('[Chat] ❌ Error marking message as read:', error);

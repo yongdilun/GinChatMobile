@@ -202,10 +202,16 @@ export function useWebSocketHandler({
             });
           }
 
-          // Auto-mark new messages as read if from others
+          // Auto-mark new messages as read if from others and user is in chatroom
           if (messageData.sender_id !== user?.id && messageData.id) {
             console.log('[Chat] 📝 Auto-marking new message as read:', messageData.id);
-            markMessageAsRead(messageData.id);
+
+            // Mark as read via API (this will also send WebSocket notification to other users)
+            markMessageAsRead(messageData.id).then(() => {
+              console.log('[Chat] ✅ Message marked as read and WebSocket notification sent');
+            }).catch((error) => {
+              console.error('[Chat] ❌ Failed to mark message as read:', error);
+            });
           }
         }
       }
