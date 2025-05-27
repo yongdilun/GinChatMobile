@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { GoldTheme } from '../../constants/GoldTheme';
 import { GoldButton } from './GoldButton';
-import { Message, chatAPI } from '../services/api';
+import { Message, chatAPI, mediaAPI } from '../services/api';
 import { MediaSelector } from './chat/MediaSelector';
 import { SelectedMediaType } from '../hooks/useMediaPicker';
 
@@ -43,6 +43,30 @@ export function MessageActions({
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Initialize with existing media when edit modal opens
+  useEffect(() => {
+    if (showEditModal && message.media_url) {
+      // Create a media object from existing message media
+      const existingMedia: SelectedMediaType = {
+        uri: message.media_url,
+        type: message.message_type.includes('video') ? 'video' :
+              message.message_type.includes('audio') ? 'audio' : 'image',
+        mimeType: message.message_type.includes('video') ? 'video/mp4' :
+                  message.message_type.includes('audio') ? 'audio/mpeg' : 'image/jpeg',
+        name: `existing_${message.message_type}.${
+          message.message_type.includes('video') ? 'mp4' :
+          message.message_type.includes('audio') ? 'mp3' : 'jpg'
+        }`,
+        backendType: message.message_type.includes('video') ? 'video' :
+                     message.message_type.includes('audio') ? 'audio' : 'picture',
+      };
+      setSelectedMedia(existingMedia);
+    } else if (showEditModal && !message.media_url) {
+      // No existing media
+      setSelectedMedia(null);
+    }
+  }, [showEditModal, message.media_url, message.message_type]);
 
   // Only show actions for user's own messages
   const canModify = message.sender_id === currentUserId;
@@ -74,20 +98,27 @@ export function MessageActions({
   const handleMediaSelected = async (media: SelectedMediaType) => {
     try {
       setIsUploading(true);
-      console.log('[MessageActions] Uploading media for edit:', media.name);
+      console.log('[MessageActions] Uploading new media for edit:', media.name);
 
-      // Upload media to get URL
-      const uploadResponse = await chatAPI.uploadMedia(media.uri, media.backendType);
+      // Prepare file object for upload
+      const fileObject = {
+        uri: media.uri,
+        type: media.mimeType || 'application/octet-stream',
+        name: media.name
+      };
 
-      // Set the selected media with the uploaded URL
+      // Upload new media to get URL
+      const uploadResponse = await mediaAPI.uploadMedia(fileObject, media.backendType);
+
+      // Replace existing media with the new uploaded media
       setSelectedMedia({
         ...media,
         uri: uploadResponse.media_url, // Use the uploaded URL
       });
 
-      console.log('[MessageActions] ✅ Media uploaded successfully:', uploadResponse.media_url);
+      console.log('[MessageActions] ✅ New media uploaded successfully:', uploadResponse.media_url);
     } catch (error) {
-      console.error('[MessageActions] ❌ Failed to upload media:', error);
+      console.error('[MessageActions] ❌ Failed to upload new media:', error);
       Alert.alert('Error', 'Failed to upload media. Please try again.');
     } finally {
       setIsUploading(false);
@@ -96,6 +127,14 @@ export function MessageActions({
 
   const handleRemoveMedia = () => {
     setSelectedMedia(null);
+  };
+
+  const resetEditState = () => {
+    setEditText(message.text_content || '');
+    setSelectedMedia(null);
+    setEditMessageType(message.message_type || 'text');
+    setIsEditing(false);
+    setIsUploading(false);
   };
 
   const handleDelete = () => {
@@ -155,8 +194,8 @@ export function MessageActions({
       }
 
       await onEdit(message.id, editText.trim(), mediaUrl || undefined, messageType);
+      resetEditState(); // Reset all edit state
       setShowEditModal(false);
-      setSelectedMedia(null); // Reset media selection
       onClose(); // Close the parent message actions modal
     } catch (error) {
       Alert.alert('Error', 'Failed to edit message. Please try again.');
@@ -259,6 +298,7 @@ export function MessageActions({
                 <TouchableOpacity
                   onPress={() => {
                     console.log('[MessageActions] Edit modal close button pressed');
+                    resetEditState();
                     setShowEditModal(false);
                     onClose(); // Close the parent message actions modal
                   }}
@@ -312,9 +352,18 @@ export function MessageActions({
                         size={20}
                         color={GoldTheme.gold.primary}
                       />
-                      <Text style={styles.mediaFileName} numberOfLines={1}>
-                        {selectedMedia.name}
-                      </Text>
+                      <View style={styles.mediaInfo}>
+                        <Text style={styles.mediaFileName} numberOfLines={1}>
+                          {selectedMedia.name.startsWith('existing_')
+                            ? `Current ${selectedMedia.backendType}`
+                            : selectedMedia.name}
+                        </Text>
+                        {selectedMedia.name.startsWith('existing_') && (
+                          <Text style={styles.mediaSubtext}>
+                            Tap media buttons to replace
+                          </Text>
+                        )}
+                      </View>
                       <TouchableOpacity
                         style={styles.removeMediaIconButton}
                         onPress={handleRemoveMedia}
@@ -331,6 +380,7 @@ export function MessageActions({
                   title="Cancel"
                   onPress={() => {
                     console.log('[MessageActions] Cancel button pressed');
+                    resetEditState();
                     setShowEditModal(false);
                     onClose(); // Close the parent message actions modal
                   }}
@@ -483,12 +533,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 0, 0.3)',
   },
-  mediaFileName: {
+  mediaInfo: {
     flex: 1,
-    color: GoldTheme.text.primary,
-    fontSize: 14,
     marginLeft: 8,
     marginRight: 8,
+  },
+  mediaFileName: {
+    color: GoldTheme.text.primary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  mediaSubtext: {
+    color: GoldTheme.text.muted,
+    fontSize: 12,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   removeMediaIconButton: {
     padding: 4,
