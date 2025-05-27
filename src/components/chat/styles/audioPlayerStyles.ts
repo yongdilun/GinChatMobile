@@ -6,7 +6,7 @@ export const audioPlayerStyles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 16,
     overflow: 'hidden',
-    ...GoldTheme.shadow.medium,
+    ...GoldTheme.shadow.dark,
   },
   audioPlayerCompact: {
     marginVertical: 4,
@@ -151,7 +151,7 @@ export const audioPlayerStyles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     backgroundColor: GoldTheme.gold.primary,
-    ...GoldTheme.shadow.small,
+    ...GoldTheme.shadow.dark,
   },
   audioTimeContainer: {
     flexDirection: 'row',
@@ -220,6 +220,8 @@ export const audioPlayerStyles = StyleSheet.create({
     borderRadius: 20,
     padding: 8,
     minHeight: 40,
+    minWidth: 320,
+    maxWidth: '100%',
   },
   compactPlayButton: {
     width: 32,

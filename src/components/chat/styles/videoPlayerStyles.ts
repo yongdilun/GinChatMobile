@@ -4,14 +4,14 @@ import { GoldTheme } from '../../../../constants/GoldTheme';
 export const videoPlayerStyles = StyleSheet.create({
   videoPlayerContainer: {
     width: '100%',
-    maxWidth: 280,
+    maxWidth: 320,
     height: 200,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#000',
     position: 'relative',
     alignSelf: 'center',
-    ...GoldTheme.shadow.medium,
+    ...GoldTheme.shadow.dark,
   },
   videoPlayer: {
     width: '100%',
@@ -185,7 +185,7 @@ export const videoPlayerStyles = StyleSheet.create({
   videoPlayerCompact: {
     width: '100%',
     height: 160,
-    maxWidth: 280,
+    maxWidth: 320,
   },
   videoPlayButtonCompact: {
     width: 60,
