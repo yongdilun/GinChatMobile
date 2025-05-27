@@ -759,4 +759,30 @@ export const chatAPI = {
       return { messages: [], count: 0 };
     }
   },
+
+  markAllMessagesAsRead: async (chatroomId: string) => {
+    try {
+      console.log(`[API] Marking all messages as read for chatroom ${chatroomId}`);
+      const response = await api.post(`/chatrooms/${chatroomId}/mark-all-read`);
+      console.log('[API] All messages marked as read successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] Failed to mark all messages as read:', error);
+      throw error;
+    }
+  },
+
+  markSingleMessageAsRead: async (messageId: string) => {
+    try {
+      console.log(`[API] Marking single message as read: ${messageId}`);
+      const response = await api.post(`/messages/${messageId}/mark-read`);
+      console.log('[API] Message marked as read successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`[API] Failed to mark message ${messageId} as read:`, error);
+      // Don't throw error to prevent disrupting the user experience
+      // Auto-read failures should be silent
+      return null;
+    }
+  },
 };

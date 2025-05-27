@@ -3,7 +3,7 @@ import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSimpleWebSocket, WebSocketMessage as WSMessage } from '@/contexts/SimpleWebSocketContext';
-import { Message } from '@/services/api';
+import { Message, chatAPI } from '@/services/api';
 
 // Use the same API URL as the rest of the app
 const API_URL = 'https://ginchat-14ry.onrender.com/api';
@@ -204,13 +204,18 @@ export function useWebSocketHandler({
 
           // Auto-mark new messages as read if from others and user is in chatroom
           if (messageData.sender_id !== user?.id && messageData.id) {
-            console.log('[Chat] 📝 Auto-marking new message as read:', messageData.id);
+            console.log('[Chat] 🚀 Auto-marking new message as read via WebSocket:', messageData.id);
 
-            // Mark as read via API (this will also send WebSocket notification to other users)
-            markMessageAsRead(messageData.id).then(() => {
-              console.log('[Chat] ✅ Message marked as read and WebSocket notification sent');
+            // Use the new single message auto-read API (this will also send WebSocket notification to other users)
+            chatAPI.markSingleMessageAsRead(messageData.id).then((response) => {
+              if (response) {
+                console.log('[Chat] ✅ Message auto-marked as read via WebSocket, notification sent to other users');
+              } else {
+                console.log('[Chat] ⚠️ Message auto-read failed silently (non-critical)');
+              }
             }).catch((error) => {
-              console.error('[Chat] ❌ Failed to mark message as read:', error);
+              console.error('[Chat] ❌ Failed to auto-mark message as read via WebSocket:', error);
+              // Don't throw error - auto-read failures should be silent
             });
           }
         }

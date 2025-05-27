@@ -37,27 +37,7 @@ import { usePaginatedMessages } from '../../src/hooks/usePaginatedMessages';
 import { useMediaPicker } from '../../src/hooks/useMediaPicker';
 import { useAudioRecorder } from '../../src/hooks/useAudioRecorder';
 
-// Use the same API URL as the rest of the app
-const API_URL = 'https://ginchat-14ry.onrender.com/api';
 
-// Debounce utility to prevent spam calls
-const debounce = (func: Function, wait: number) => {
-  let timeout: NodeJS.Timeout;
-  return function executedFunction(...args: any[]) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
-
-interface AppWebSocketMessage {
-  type: string;
-  data: any;
-  chatroom_id?: string;
-}
 
 export default function ChatDetail() {
   const { id: chatroomId } = useLocalSearchParams<{ id: string }>();
@@ -75,12 +55,9 @@ export default function ChatDetail() {
     messages,
     hasMore,
     unreadCount,
-    totalCount,
     loading,
     loadingMore,
-    error: messagesError,
     firstUnreadMessageId,
-    unreadMessageIndex,
     loadInitialMessages,
     loadMoreMessages,
     addNewMessage,
@@ -113,17 +90,16 @@ export default function ChatDetail() {
     isRecorderVisible,
     recordedAudio,
     showRecorder,
-    hideRecorder,
     handleRecordingComplete,
     handleRecordingCancel,
     clearRecording,
   } = useAudioRecorder();
 
-  // Mark message as read function
+  // Mark message as read function (kept for manual marking, but WebSocket auto-read now handles automatic marking)
   const markMessageAsRead = useCallback(async (messageId: string) => {
     if (!user?.id) return;
 
-    console.log('[Chat] 🚀 Optimistic mark message as read:', messageId);
+    console.log('[Chat] 🚀 Manual mark message as read:', messageId);
 
     // Find the message to update
     const messageToUpdate = messages.find(msg => msg.id === messageId);
@@ -145,30 +121,23 @@ export default function ChatDetail() {
       updateMessage(messageId, { read_status: updatedReadStatus });
     }
 
-    // Make API call (this will also send WebSocket notification to other users)
+    // Use the new single message API for manual marking
     try {
-      console.log('[Chat] 📤 Sending mark-as-read API request for message:', messageId);
-      const response = await fetch(`${API_URL}/messages/read`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message_id: messageId }),
-      });
+      console.log('[Chat] 📤 Sending manual mark-as-read API request for message:', messageId);
+      const response = await chatAPI.markSingleMessageAsRead(messageId);
 
-      if (!response.ok) {
-        console.error('[Chat] ❌ Failed to mark message as read:', response.status);
+      if (!response) {
+        console.error('[Chat] ❌ Failed to mark message as read manually');
         // Revert optimistic update on failure
         const revertedReadStatus = messageToUpdate.read_status?.filter(rs => rs.user_id !== user.id) || [];
         updateMessage(messageId, { read_status: revertedReadStatus });
       } else {
-        console.log('[Chat] ✅ Message marked as read successfully, WebSocket notification sent to other users');
+        console.log('[Chat] ✅ Message marked as read manually, WebSocket notification sent to other users');
       }
     } catch (error) {
-      console.error('[Chat] ❌ Error marking message as read:', error);
+      console.error('[Chat] ❌ Error marking message as read manually:', error);
     }
-  }, [user?.id, user?.email, token, messages, updateMessage]);
+  }, [user?.id, user?.email, messages, updateMessage]);
 
   // WebSocket handler - create a custom setMessages function for compatibility
   const setMessagesForWebSocket = useCallback((updater: React.SetStateAction<Message[]>) => {
@@ -183,7 +152,7 @@ export default function ChatDetail() {
     console.log('[Chat] WebSocket message update received');
   }, [messages, addNewMessage]);
 
-  const { processedMessages } = useWebSocketHandler({
+  useWebSocketHandler({
     chatroomId,
     setMessages: setMessagesForWebSocket,
     markMessageAsRead,
@@ -220,16 +189,12 @@ export default function ChatDetail() {
         }
       });
 
-      const response = await fetch(`${API_URL}/chatrooms/${chatroomId}/mark-all-read`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await chatAPI.markAllMessagesAsRead(chatroomId);
 
-      if (!response.ok) {
-        console.error('[Chat] ❌ Failed to mark all messages as read:', response.status);
+      if (!response) {
+        console.error('[Chat] ❌ Failed to mark all messages as read');
+      } else {
+        console.log('[Chat] ✅ All messages marked as read successfully');
       }
     } catch (error) {
       console.error('[Chat] ❌ Error marking all messages as read:', error);
