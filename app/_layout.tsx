@@ -9,25 +9,16 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { setupProductionLogging, Logger } from '../src/utils/logger';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { notificationService, Notifications } from '../src/services/notificationService';
-import { firebaseService } from '../src/services/firebaseService';
 
 export default function RootLayout() {
   // Setup production logging and notifications on app start
   useEffect(() => {
     setupProductionLogging();
-
-    // Initialize Firebase
-    const initializeFirebase = async () => {
-      try {
-        await firebaseService.initialize();
-        firebaseService.setupMessageHandlers();
-        Logger.info('Firebase initialized successfully');
-      } catch (error) {
-        Logger.error('Failed to initialize Firebase:', error);
-      }
-    };
-
-    initializeFirebase();
+    
+    // Initialize notification service
+    notificationService.initialize().catch((error) => {
+      Logger.error('Failed to initialize notifications:', error);
+    });
 
     // Setup enhanced notification handlers
     const notificationListener = notificationService.addNotificationReceivedListener(

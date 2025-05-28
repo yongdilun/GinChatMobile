@@ -30,16 +30,13 @@
     "plugins": [
       "expo-router",
       [
-        "@react-native-firebase/app",
+        "expo-build-properties",
         {
-          "android_bypass_emulator_url_remap": true
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "color": "#FFD700",
-          "defaultChannel": "chat-messages"
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
+          }
         }
       ]
     ],
