@@ -36,14 +36,6 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-# Environment variables
-.env
-.env.*
-!.env.example
-
-# Firebase config
-ios/GoogleService-Info.plist
-
 # OSX
 .DS_Store
 

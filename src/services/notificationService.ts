@@ -3,7 +3,11 @@ import * as Device from 'expo-device';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Logger } from '../utils/logger';
-import { expoPushConfig } from '../config/firebase';
+
+// Expo push notification configuration
+const expoPushConfig = {
+  projectId: 'ed9112c0-dcb5-44d5-abf9-2f85fc7baf6c',
+};
 
 // Enhanced notification handler with app state awareness
 Notifications.setNotificationHandler({
