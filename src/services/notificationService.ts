@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Logger } from '../utils/logger';
+import { firebaseService } from './firebaseService';
 
 // Enhanced notification handler with app state awareness
 Notifications.setNotificationHandler({
@@ -15,6 +16,8 @@ Notifications.setNotificationHandler({
       shouldShowAlert: !isInForeground,
       shouldPlaySound: !isInForeground,
       shouldSetBadge: true, // Always update badge
+      shouldShowBanner: !isInForeground,
+      shouldShowList: true,
     };
   },
 });
@@ -71,7 +74,7 @@ class NotificationService {
       // Request permissions
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) {
-        Logger.warn('Notification permissions not granted');
+        Logger.error('Notification permissions not granted');
         return;
       }
 
@@ -100,7 +103,7 @@ class NotificationService {
   async requestPermissions(): Promise<boolean> {
     try {
       if (!Device.isDevice) {
-        Logger.warn('Push notifications only work on physical devices');
+        Logger.error('Push notifications only work on physical devices');
         return false;
       }
 
@@ -113,7 +116,7 @@ class NotificationService {
       }
 
       if (finalStatus !== 'granted') {
-        Logger.warn('Notification permission denied');
+        Logger.error('Notification permission denied');
         return false;
       }
 
@@ -139,18 +142,45 @@ class NotificationService {
   async getPushToken(): Promise<string | null> {
     try {
       if (!Device.isDevice) {
-        Logger.warn('Push tokens only work on physical devices');
+        Logger.error('Push tokens only work on physical devices');
         return null;
       }
 
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: 'ed9112c0-dcb5-44d5-abf9-2f85fc7baf6c', // Your actual project ID
-      });
+      // For Expo projects, prioritize Expo push tokens
+      try {
+        const tokenData = await Notifications.getExpoPushTokenAsync({
+          projectId: 'ed9112c0-dcb5-44d5-abf9-2f85fc7baf6c',
+        });
 
-      Logger.info('Push token obtained:', tokenData.data);
-      return tokenData.data;
+        Logger.info('Expo push token obtained:', tokenData.data);
+        return tokenData.data;
+      } catch (expoError) {
+        Logger.error('Failed to get Expo push token:', expoError);
+        
+        // Only try FCM in production builds
+        if (__DEV__) {
+          Logger.info('Skipping FCM token in development environment');
+          return null;
+        }
+        
+        // Fallback to Firebase FCM token (only for production builds)
+        try {
+          await firebaseService.initialize();
+          const fcmToken = await firebaseService.getFCMToken();
+          
+          if (fcmToken) {
+            Logger.info('FCM token obtained as fallback');
+            return fcmToken;
+          }
+        } catch (fcmError) {
+          Logger.error('Error getting FCM token:', fcmError);
+        }
+        
+        // If both Expo and FCM fail, return null
+        return null;
+      }
     } catch (error) {
-      Logger.error('Error getting push token:', error);
+      Logger.error('[ERROR] Error getting push token:', error);
       return null;
     }
   }

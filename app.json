@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yongdidi.GinChatMobile"
+      "package": "com.yongdidi.GinChatMobile",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -28,6 +29,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "@react-native-firebase/app",
+        {
+          "android_bypass_emulator_url_remap": true
+        }
+      ],
       [
         "expo-notifications",
         {
