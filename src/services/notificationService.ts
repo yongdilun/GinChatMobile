@@ -2,7 +2,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Logger } from '../utils/logger';
+import { Logger } from '@/src/utils/logger';
 
 // Configure notification handler to hide notifications when app is in foreground
 Notifications.setNotificationHandler({

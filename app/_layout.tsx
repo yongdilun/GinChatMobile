@@ -4,10 +4,10 @@ import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { SimpleWebSocketProvider } from '@/contexts/SimpleWebSocketContext';
-import { ProtectedRoute } from '../src/components/ProtectedRoute';
-import { setupProductionLogging } from '../src/utils/logger';
-import { ErrorBoundary } from '../src/components/ErrorBoundary';
-import { notificationService, Notifications } from '../src/services/notificationService';
+import { ProtectedRoute } from '@/src/components/ProtectedRoute';
+import { setupProductionLogging } from '@/src/utils/logger';
+import { ErrorBoundary } from '@/src/components/ErrorBoundary';
+import { notificationService, Notifications } from '@/src/services/notificationService';
 
 export default function RootLayout() {
   // Setup production logging and notifications on app start
