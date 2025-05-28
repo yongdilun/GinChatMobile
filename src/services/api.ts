@@ -317,6 +317,10 @@ export const authAPI = {
       await AsyncStorage.removeItem('user');
       console.log('[API] ✅ User removed from AsyncStorage');
 
+      console.log('[API] Removing push token from AsyncStorage...');
+      await AsyncStorage.removeItem('pushToken');
+      console.log('[API] ✅ Push token removed from AsyncStorage');
+
       // Verify storage is cleared
       const remainingToken = await AsyncStorage.getItem('token');
       const remainingUser = await AsyncStorage.getItem('user');
@@ -330,6 +334,51 @@ export const authAPI = {
     }
 
     console.log('=== API LOGOUT PROCESS COMPLETED ===');
+  },
+
+  // Push token management
+  registerPushToken: async (token: string, deviceInfo?: any) => {
+    try {
+      Logger.api.info('Registering push token with server');
+      const response = await api.post('/auth/push-token', {
+        token,
+        device_info: deviceInfo,
+        platform: Platform.OS,
+      });
+      Logger.api.info('Push token registered successfully');
+      return response.data;
+    } catch (error) {
+      Logger.api.error('Failed to register push token:', error);
+      throw error;
+    }
+  },
+
+  updatePushToken: async (token: string, deviceInfo?: any) => {
+    try {
+      Logger.api.info('Updating push token with server');
+      const response = await api.put('/auth/push-token', {
+        token,
+        device_info: deviceInfo,
+        platform: Platform.OS,
+      });
+      Logger.api.info('Push token updated successfully');
+      return response.data;
+    } catch (error) {
+      Logger.api.error('Failed to update push token:', error);
+      throw error;
+    }
+  },
+
+  removePushToken: async () => {
+    try {
+      Logger.api.info('Removing push token from server');
+      const response = await api.delete('/auth/push-token');
+      Logger.api.info('Push token removed successfully');
+      return response.data;
+    } catch (error) {
+      Logger.api.error('Failed to remove push token:', error);
+      throw error;
+    }
   },
 
   getCurrentUser: async () => {

@@ -1,6 +1,8 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
+import { notificationService } from '../services/notificationService';
+import { Logger } from '../utils/logger';
 import { router } from 'expo-router';
 
 // Define user type
@@ -89,6 +91,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setUser(userData);
       setToken(data.token);
+
+      // Initialize notifications after successful login
+      try {
+        await notificationService.initialize();
+        const pushToken = notificationService.getCurrentPushToken();
+
+        if (pushToken) {
+          // Register push token with server
+          await authAPI.registerPushToken(pushToken, {
+            device_type: 'mobile',
+            app_version: '1.0.0',
+          });
+          Logger.auth.info('Push token registered with server');
+        }
+      } catch (notificationError) {
+        Logger.auth.warn('Failed to initialize notifications:', notificationError);
+        // Don't fail login if notifications fail
+      }
 
       // Add a small delay to ensure the auth state is updated before navigation
       setTimeout(() => {

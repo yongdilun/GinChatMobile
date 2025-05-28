@@ -1,15 +1,51 @@
-import React from 'react';
-import { Stack } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { SimpleWebSocketProvider } from '@/contexts/SimpleWebSocketContext';
 import { ProtectedRoute } from '../src/components/ProtectedRoute';
+import { setupProductionLogging } from '../src/utils/logger';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import { notificationService, Notifications } from '../src/services/notificationService';
 
 export default function RootLayout() {
+  // Setup production logging and notifications on app start
+  useEffect(() => {
+    setupProductionLogging();
+
+    // Setup notification handlers
+    const notificationListener = notificationService.addNotificationReceivedListener(
+      (notification) => {
+        console.log('Notification received while app is running:', notification);
+        // Notifications are hidden in-app due to shouldShowAlert: false
+      }
+    );
+
+    const responseListener = notificationService.addNotificationResponseReceivedListener(
+      (response) => {
+        console.log('Notification tapped:', response);
+
+        // Handle notification tap - navigate to relevant chat
+        const data = response.notification.request.content.data;
+        if (data?.chatroomId) {
+          router.push(`/chat/${data.chatroomId}`);
+        } else {
+          router.push('/(tabs)/chats');
+        }
+      }
+    );
+
+    return () => {
+      notificationListener.remove();
+      responseListener.remove();
+    };
+  }, []);
+
   return (
-    <View style={{ flex: 1 }}>
-      <AuthProvider>
+    <ErrorBoundary>
+      <View style={{ flex: 1 }}>
+        <AuthProvider>
         <SimpleWebSocketProvider>
           <ProtectedRoute>
             <Stack
@@ -56,5 +92,6 @@ export default function RootLayout() {
         </SimpleWebSocketProvider>
       </AuthProvider>
     </View>
+    </ErrorBoundary>
   );
 }
