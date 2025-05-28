@@ -42,7 +42,6 @@ yarn-error.*
 !.env.example
 
 # Firebase config
-google-services.json
 ios/GoogleService-Info.plist
 
 # OSX

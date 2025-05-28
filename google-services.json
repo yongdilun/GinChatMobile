@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "934599534009",
-    "project_id": "ginchat-33502",
-    "storage_bucket": "ginchat-33502.firebasestorage.app"
+    "project_number": "${FIREBASE_PROJECT_NUMBER}",
+    "project_id": "${FIREBASE_PROJECT_ID}",
+    "storage_bucket": "${FIREBASE_STORAGE_BUCKET}"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:934599534009:android:52f6442f1cad7e36820268",
+        "mobilesdk_app_id": "${FIREBASE_APP_ID}",
         "android_client_info": {
           "package_name": "com.yongdidi.GinChatMobile"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAqr6WDcYCxbbn57UBnbHgCg59DHIGXc2A"
+          "current_key": "${FIREBASE_API_KEY}"
         }
       ],
       "services": {
