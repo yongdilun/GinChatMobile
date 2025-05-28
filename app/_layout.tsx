@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { SimpleWebSocketProvider } from '@/contexts/SimpleWebSocketContext';
+import { NotificationProvider } from '../src/contexts/NotificationContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { setupProductionLogging, Logger } from '../src/utils/logger';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
@@ -14,11 +15,17 @@ export default function RootLayout() {
   useEffect(() => {
     setupProductionLogging();
 
-    // Setup notification handlers
+    // Setup enhanced notification handlers
     const notificationListener = notificationService.addNotificationReceivedListener(
       (notification) => {
         Logger.info('Notification received while app is running:', notification);
-        // Notifications are hidden in-app due to shouldShowAlert: false
+
+        // Handle notification data for state management
+        const data = notification.request.content.data;
+        if (data) {
+          // This will be handled by the NotificationContext
+          Logger.debug('Processing notification data:', data);
+        }
       }
     );
 
@@ -26,8 +33,18 @@ export default function RootLayout() {
       (response) => {
         Logger.info('Notification tapped:', response);
 
-        // Handle notification tap - navigate to relevant chat
+        // Handle notification actions
+        const action = response.actionIdentifier;
         const data = response.notification.request.content.data;
+
+        if (action === 'mark_read' && data?.chatroomId) {
+          // Handle mark as read action without opening app
+          Logger.info('Mark as read action triggered for chatroom:', data.chatroomId);
+          // This could trigger an API call to mark messages as read
+          return;
+        }
+
+        // Handle navigation for tap or reply actions
         if (data?.chatroomId) {
           router.push(`/chat/${data.chatroomId}`);
         } else {
@@ -46,8 +63,9 @@ export default function RootLayout() {
     <ErrorBoundary>
       <View style={{ flex: 1 }}>
         <AuthProvider>
-        <SimpleWebSocketProvider>
-          <ProtectedRoute>
+          <NotificationProvider>
+            <SimpleWebSocketProvider>
+              <ProtectedRoute>
             <Stack
               screenOptions={{
             headerShown: false,
@@ -86,12 +104,13 @@ export default function RootLayout() {
                   animation: 'slide_from_right',
                 }}
               />
-          </Stack>
-          </ProtectedRoute>
-          <StatusBar style="light" />
-        </SimpleWebSocketProvider>
-      </AuthProvider>
-    </View>
+              </Stack>
+              </ProtectedRoute>
+              <StatusBar style="light" />
+            </SimpleWebSocketProvider>
+          </NotificationProvider>
+        </AuthProvider>
+      </View>
     </ErrorBoundary>
   );
 }

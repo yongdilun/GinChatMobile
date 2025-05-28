@@ -1,16 +1,22 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import { Platform, AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Logger } from '../utils/logger';
 
-// Configure notification handler to hide notifications when app is in foreground
+// Enhanced notification handler with app state awareness
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: false, // Hide notifications when app is active
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const appState = AppState.currentState;
+    const isInForeground = appState === 'active';
+
+    // Show notifications when app is in background/inactive, hide when active
+    return {
+      shouldShowAlert: !isInForeground,
+      shouldPlaySound: !isInForeground,
+      shouldSetBadge: true, // Always update badge
+    };
+  },
 });
 
 export interface PushToken {
@@ -18,14 +24,49 @@ export interface PushToken {
   type: 'expo' | 'fcm' | 'apns';
 }
 
+export interface NotificationData {
+  type: 'new_message' | 'message_read' | 'user_joined' | 'user_left';
+  chatroomId?: string;
+  senderId?: number;
+  messageId?: string;
+  timestamp?: string;
+}
+
+export interface NotificationState {
+  totalUnreadCount: number;
+  chatroomUnreadCounts: Record<string, number>;
+  lastNotificationTime: number;
+  isInForeground: boolean;
+}
+
+export interface NotificationGroup {
+  chatroomId: string;
+  chatroomName: string;
+  count: number;
+  lastMessage: string;
+  lastSender: string;
+  timestamp: number;
+}
+
 class NotificationService {
   private pushToken: string | null = null;
   private isRegistered = false;
+  private notificationState: NotificationState = {
+    totalUnreadCount: 0,
+    chatroomUnreadCounts: {},
+    lastNotificationTime: 0,
+    isInForeground: true,
+  };
+  private notificationGroups: Map<string, NotificationGroup> = new Map();
+  private appStateSubscription: any = null;
 
   // Initialize notification service
   async initialize(): Promise<void> {
     try {
       Logger.info('Initializing notification service...');
+
+      // Setup app state monitoring
+      this.setupAppStateMonitoring();
 
       // Request permissions
       const hasPermission = await this.requestPermissions();
@@ -41,6 +82,12 @@ class NotificationService {
         await this.storePushToken(token);
         Logger.info('Push token obtained and stored');
       }
+
+      // Load saved notification state
+      await this.loadNotificationState();
+
+      // Setup notification categories for actions
+      await this.setupNotificationCategories();
 
       this.isRegistered = true;
       Logger.info('Notification service initialized successfully');
@@ -186,6 +233,152 @@ class NotificationService {
       Logger.debug('Local notification scheduled');
     } catch (error) {
       Logger.error('Error scheduling local notification:', error);
+    }
+  }
+
+  // Setup app state monitoring
+  private setupAppStateMonitoring(): void {
+    this.appStateSubscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      const wasInForeground = this.notificationState.isInForeground;
+      this.notificationState.isInForeground = nextAppState === 'active';
+
+      Logger.debug(`App state changed: ${nextAppState}, isInForeground: ${this.notificationState.isInForeground}`);
+
+      // When app comes to foreground, clear notifications and update badge
+      if (!wasInForeground && this.notificationState.isInForeground) {
+        this.handleAppForeground();
+      }
+    });
+  }
+
+  // Handle app coming to foreground
+  private async handleAppForeground(): Promise<void> {
+    try {
+      // Clear all notifications when app becomes active
+      await this.clearAllNotifications();
+
+      // Update badge count based on actual unread messages
+      // This should be called from the chat service when unread counts are updated
+      Logger.debug('App came to foreground, cleared notifications');
+    } catch (error) {
+      Logger.error('Error handling app foreground:', error);
+    }
+  }
+
+  // Setup notification categories for quick actions
+  private async setupNotificationCategories(): Promise<void> {
+    try {
+      await Notifications.setNotificationCategoryAsync('message', [
+        {
+          identifier: 'reply',
+          buttonTitle: 'Reply',
+          options: {
+            opensAppToForeground: true,
+          },
+        },
+        {
+          identifier: 'mark_read',
+          buttonTitle: 'Mark as Read',
+          options: {
+            opensAppToForeground: false,
+          },
+        },
+      ]);
+
+      Logger.debug('Notification categories set up');
+    } catch (error) {
+      Logger.error('Error setting up notification categories:', error);
+    }
+  }
+
+  // Load notification state from storage
+  private async loadNotificationState(): Promise<void> {
+    try {
+      const savedState = await AsyncStorage.getItem('notificationState');
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        this.notificationState = {
+          ...this.notificationState,
+          ...parsed,
+          isInForeground: AppState.currentState === 'active', // Always use current app state
+        };
+        Logger.debug('Notification state loaded from storage');
+      }
+    } catch (error) {
+      Logger.error('Error loading notification state:', error);
+    }
+  }
+
+  // Save notification state to storage
+  private async saveNotificationState(): Promise<void> {
+    try {
+      await AsyncStorage.setItem('notificationState', JSON.stringify(this.notificationState));
+      Logger.debug('Notification state saved to storage');
+    } catch (error) {
+      Logger.error('Error saving notification state:', error);
+    }
+  }
+
+  // Update unread count for a chatroom
+  async updateChatroomUnreadCount(chatroomId: string, count: number): Promise<void> {
+    this.notificationState.chatroomUnreadCounts[chatroomId] = count;
+    this.notificationState.totalUnreadCount = Object.values(this.notificationState.chatroomUnreadCounts)
+      .reduce((total, count) => total + count, 0);
+
+    await this.setBadgeCount(this.notificationState.totalUnreadCount);
+    await this.saveNotificationState();
+
+    Logger.debug(`Updated unread count for chatroom ${chatroomId}: ${count}, total: ${this.notificationState.totalUnreadCount}`);
+  }
+
+  // Get current notification state
+  getNotificationState(): NotificationState {
+    return { ...this.notificationState };
+  }
+
+  // Handle incoming notification data
+  async handleNotificationData(data: NotificationData): Promise<void> {
+    try {
+      switch (data.type) {
+        case 'new_message':
+          if (data.chatroomId) {
+            await this.handleNewMessageNotification(data);
+          }
+          break;
+        case 'message_read':
+          if (data.chatroomId) {
+            await this.handleMessageReadNotification(data);
+          }
+          break;
+        default:
+          Logger.debug('Unhandled notification type:', data.type);
+      }
+    } catch (error) {
+      Logger.error('Error handling notification data:', error);
+    }
+  }
+
+  // Handle new message notification
+  private async handleNewMessageNotification(data: NotificationData): Promise<void> {
+    if (!data.chatroomId) return;
+
+    const currentCount = this.notificationState.chatroomUnreadCounts[data.chatroomId] || 0;
+    await this.updateChatroomUnreadCount(data.chatroomId, currentCount + 1);
+  }
+
+  // Handle message read notification
+  private async handleMessageReadNotification(data: NotificationData): Promise<void> {
+    if (!data.chatroomId) return;
+
+    // Reset unread count for this chatroom
+    await this.updateChatroomUnreadCount(data.chatroomId, 0);
+  }
+
+  // Cleanup method
+  cleanup(): void {
+    if (this.appStateSubscription) {
+      this.appStateSubscription.remove();
+      this.appStateSubscription = null;
     }
   }
 }
