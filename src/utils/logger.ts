@@ -32,13 +32,16 @@ export const Logger = {
   debug: (message: string, ...args: any[]) => __DEV__ && console.log(message, ...args),
 };
 
-// Setup production logging
+// Setup production logging - keep errors and warnings, remove debug/info
 export const setupProductionLogging = () => {
   if (!__DEV__) {
+    // Remove debug and info logs in production
     console.log = () => {};
     console.info = () => {};
     console.debug = () => {};
-    console.warn = () => {};
+
+    // Keep warnings and errors for important issues
+    // console.warn and console.error are preserved
   }
 };
 

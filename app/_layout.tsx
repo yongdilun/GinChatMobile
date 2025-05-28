@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { SimpleWebSocketProvider } from '@/contexts/SimpleWebSocketContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { setupProductionLogging } from '../src/utils/logger';
+import { setupProductionLogging, Logger } from '../src/utils/logger';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { notificationService, Notifications } from '../src/services/notificationService';
 
@@ -17,14 +17,14 @@ export default function RootLayout() {
     // Setup notification handlers
     const notificationListener = notificationService.addNotificationReceivedListener(
       (notification) => {
-        console.log('Notification received while app is running:', notification);
+        Logger.info('Notification received while app is running:', notification);
         // Notifications are hidden in-app due to shouldShowAlert: false
       }
     );
 
     const responseListener = notificationService.addNotificationResponseReceivedListener(
       (response) => {
-        console.log('Notification tapped:', response);
+        Logger.info('Notification tapped:', response);
 
         // Handle notification tap - navigate to relevant chat
         const data = response.notification.request.content.data;

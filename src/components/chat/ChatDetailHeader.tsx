@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Chatroom, Message, chatAPI } from '@/services/api';
 import { GoldTheme } from '../../../constants/GoldTheme';
+import { Logger } from '@/utils/logger';
 import { AudioPlayer } from './AudioPlayer';
 import { VideoPlayer } from './VideoPlayer';
 import { ImageModal } from './ImageModal';
@@ -49,15 +50,15 @@ export function ChatDetailHeader({
       setMediaError(null);
 
       try {
-        console.log('[ChatDetailHeader] Fetching media for chatroom:', chatroom.id);
+        Logger.debug('[ChatDetailHeader] Fetching media for chatroom:', chatroom.id);
         const response = await chatAPI.getChatroomMedia(chatroom.id);
-        console.log('[ChatDetailHeader] Media fetched successfully:', {
+        Logger.debug('[ChatDetailHeader] Media fetched successfully:', {
           count: response.count,
           messages: response.messages.length
         });
         setMediaMessages(response.messages);
       } catch (error) {
-        console.error('[ChatDetailHeader] Failed to fetch media:', error);
+        Logger.error('[ChatDetailHeader] Failed to fetch media:', error);
         setMediaError('Failed to load media');
         setMediaMessages([]);
       } finally {
@@ -99,9 +100,9 @@ export function ChatDetailHeader({
     return hasAudioType && hasMediaUrl;
   });
 
-  // Debug logging (can be removed in production)
+  // Debug logging (only in development)
   if (mediaMessages.length > 0) {
-    console.log('[ChatDetailHeader] Media loaded:', {
+    Logger.debug('[ChatDetailHeader] Media loaded:', {
       total: mediaMessages.length,
       images: images.length,
       videos: videos.length,
@@ -140,7 +141,7 @@ export function ChatDetailHeader({
             <TouchableOpacity
               style={chatHeaderStyles.backButtonInHeader}
               onPress={() => {
-                console.log('[Header] Back button pressed');
+                Logger.debug('[Header] Back button pressed');
                 router.back();
               }}
               activeOpacity={0.7}
@@ -176,7 +177,7 @@ export function ChatDetailHeader({
                 <TouchableOpacity
                   style={chatHeaderStyles.headerButton}
                   onPress={() => {
-                    console.log('[Header] Details button pressed, current showContent:', showContent);
+                    Logger.debug('[Header] Details button pressed, current showContent:', showContent);
                     setShowContent(!showContent);
                   }}
                   activeOpacity={0.8}
@@ -194,7 +195,7 @@ export function ChatDetailHeader({
                 <TouchableOpacity
                   style={chatHeaderStyles.headerButton}
                   onPress={() => {
-                    console.log('[Chat] Three-dot menu pressed');
+                    Logger.debug('[Chat] Three-dot menu pressed');
                     if (onThreeDotPress) {
                       onThreeDotPress();
                     } else {
@@ -308,7 +309,7 @@ export function ChatDetailHeader({
                           source={{ uri: msg.media_url! }}
                           style={chatHeaderStyles.mediaThumbnail}
                           onError={(error) => {
-                            console.error('[ChatDetailHeader] Image load error:', error, 'URL:', msg.media_url);
+                            Logger.error('[ChatDetailHeader] Image load error:', error, 'URL:', msg.media_url);
                           }}
                         />
                       </TouchableOpacity>
