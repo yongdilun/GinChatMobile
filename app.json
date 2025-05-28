@@ -30,6 +30,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-notifications",
+        {
+          "color": "#FFD700",
+          "defaultChannel": "chat-messages"
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

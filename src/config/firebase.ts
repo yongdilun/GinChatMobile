@@ -1,31 +1,32 @@
-import {
-  FIREBASE_API_KEY,
-  FIREBASE_APP_ID,
-  FIREBASE_PROJECT_ID,
-  FIREBASE_STORAGE_BUCKET,
-  FIREBASE_PROJECT_NUMBER,
-} from '@env';
+// Firebase configuration for web platform only
+// Mobile apps use Expo push notifications instead
 
 export const firebaseConfig = {
-  apiKey: FIREBASE_API_KEY,
-  authDomain: `${FIREBASE_PROJECT_ID}.firebaseapp.com`,
-  projectId: FIREBASE_PROJECT_ID,
-  storageBucket: FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: FIREBASE_PROJECT_NUMBER,
-  appId: FIREBASE_APP_ID,
+  // These will be used only for web platform when needed
+  apiKey: process.env.FIREBASE_API_KEY || '',
+  authDomain: `${process.env.FIREBASE_PROJECT_ID || ''}.firebaseapp.com`,
+  projectId: process.env.FIREBASE_PROJECT_ID || '',
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: process.env.FIREBASE_PROJECT_NUMBER || '',
+  appId: process.env.FIREBASE_APP_ID || '',
+};
+
+// Expo push notification configuration
+export const expoPushConfig = {
+  projectId: 'ed9112c0-dcb5-44d5-abf9-2f85fc7baf6c',
 };
 
 // Function to generate google-services.json content
 export const generateGoogleServicesJson = () => ({
   project_info: {
-    project_number: FIREBASE_PROJECT_NUMBER,
-    project_id: FIREBASE_PROJECT_ID,
-    storage_bucket: FIREBASE_STORAGE_BUCKET,
+    project_number: process.env.FIREBASE_PROJECT_NUMBER || '',
+    project_id: process.env.FIREBASE_PROJECT_ID || '',
+    storage_bucket: process.env.FIREBASE_STORAGE_BUCKET || '',
   },
   client: [
     {
       client_info: {
-        mobilesdk_app_id: FIREBASE_APP_ID,
+        mobilesdk_app_id: process.env.FIREBASE_APP_ID || '',
         android_client_info: {
           package_name: 'com.yongdidi.GinChatMobile',
         },
@@ -33,7 +34,7 @@ export const generateGoogleServicesJson = () => ({
       oauth_client: [],
       api_key: [
         {
-          current_key: FIREBASE_API_KEY,
+          current_key: process.env.FIREBASE_API_KEY || '',
         },
       ],
       services: {
