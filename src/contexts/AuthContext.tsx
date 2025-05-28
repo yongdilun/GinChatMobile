@@ -1,8 +1,8 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '@/services/api';
-import { notificationService } from '@/src/services/notificationService';
-import { Logger } from '@/src/utils/logger';
+import { notificationService } from '../services/notificationService';
+import { Logger } from '../utils/logger';
 import { router } from 'expo-router';
 
 // Define user type

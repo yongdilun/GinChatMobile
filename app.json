@@ -31,14 +31,12 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
           "color": "#FFD700",
           "defaultChannel": "chat-messages"
         }
       ]
     ],
     "notification": {
-      "icon": "./assets/notification-icon.png",
       "color": "#FFD700",
       "iosDisplayInForeground": false,
       "androidMode": "default",
