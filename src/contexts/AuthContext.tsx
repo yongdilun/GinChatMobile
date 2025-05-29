@@ -160,8 +160,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Step 1: WebSocket will be handled by SimpleWebSocketContext
       console.log('[AuthContext] STEP 1: WebSocket will be disconnected by SimpleWebSocketContext...');
 
-      // Step 2: Call backend logout API
-      console.log('[AuthContext] STEP 2: Calling backend logout API...');
+      // Step 2: Remove push token from server
+      console.log('[AuthContext] STEP 2: Removing push token from server...');
+      try {
+        await authAPI.removePushToken();
+        console.log('[AuthContext] ✅ Push token removed from server');
+      } catch (pushTokenError) {
+        console.warn('[AuthContext] ⚠️ Failed to remove push token (continuing with logout):', pushTokenError);
+      }
+
+      // Step 3: Call backend logout API
+      console.log('[AuthContext] STEP 3: Calling backend logout API...');
       try {
         const startTime = Date.now();
         await authAPI.logout();
@@ -174,8 +183,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
-      // Step 3: Clear local storage
-      console.log('[AuthContext] STEP 3: Clearing local storage...');
+      // Step 4: Clear local storage
+      console.log('[AuthContext] STEP 4: Clearing local storage...');
       try {
         const userRemoved = await AsyncStorage.removeItem('user');
         console.log('[AuthContext] ✅ User removed from storage, result:', userRemoved);
@@ -193,15 +202,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw storageError;
       }
 
-      // Step 4: Clear state
-      console.log('[AuthContext] STEP 4: Clearing application state...');
+      // Step 5: Clear state
+      console.log('[AuthContext] STEP 5: Clearing application state...');
       console.log('[AuthContext] Setting user to null (was:', user, ')');
       setUser(null);
       console.log('[AuthContext] Setting token to null (was:', token ? 'present' : 'null', ')');
       setToken(null);
 
-      // Step 5: Navigate to login
-      console.log('[AuthContext] STEP 5: Navigating to login page...');
+      // Step 6: Navigate to login
+      console.log('[AuthContext] STEP 6: Navigating to login page...');
       console.log('[AuthContext] Current router state before navigation');
 
       try {
