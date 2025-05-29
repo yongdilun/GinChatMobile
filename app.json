@@ -20,8 +20,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yongdidi.GinChatMobile",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.yongdidi.GinChatMobile"
     },
     "web": {
       "bundler": "metro",
@@ -35,6 +34,14 @@
           "color": "#FFD700",
           "defaultChannel": "chat-messages",
           "icon": "./assets/notification-icon.png"
+        }
+      ],
+      [
+        "@react-native-firebase/app",
+        {
+          "android": {
+            "googleServicesFile": "./google-services.json"
+          }
         }
       ],
       [
