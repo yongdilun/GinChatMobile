@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Text, Alert, Modal, View, TextInput, StatusBar, RefreshControl, Clipboard } from 'react-native';
+import { StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Text, Alert, Modal, View, TextInput, StatusBar, RefreshControl, Clipboard, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +33,9 @@ export default function ChatsScreen() {
   const [createdChatroom, setCreatedChatroom] = useState<Chatroom | null>(null);
   const [navigating, setNavigating] = useState(false);
   const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [roomCode, setRoomCode] = useState('');
+  const [roomPassword, setRoomPassword] = useState('');
+  const [showPasswordInput, setShowPasswordInput] = useState(false);
 
   // WebSocket message handler for sidebar updates
   const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
@@ -276,24 +279,38 @@ export default function ChatsScreen() {
     }
   };
 
-  const handleJoinChatroom = async (chatroomId?: string) => {
-    const idToJoin = chatroomId || chatroomIdToJoin.trim();
-
-    if (!idToJoin) {
-      Alert.alert('Error', 'Please select a chatroom to join');
+  const handleJoinChatroom = async () => {
+    if (!roomCode.trim()) {
+      Alert.alert('Error', 'Please enter a room code');
       return;
     }
 
     try {
       setJoining(true);
-      await chatAPI.joinChatroom(idToJoin);
+      setError(null);
+      
+      // Try to join with the room code
+      const response = await chatAPI.joinChatroomByCode(roomCode.toUpperCase(), roomPassword);
+      
+      // If successful, close modal and navigate
       setShowJoinModal(false);
-      setShowActionModal(false);
-      setChatroomIdToJoin('');
-      fetchChatrooms(true); // Immediate refresh after joining chatroom
-      router.push(`/chat/${idToJoin}`);
+      setRoomCode('');
+      setRoomPassword('');
+      setShowPasswordInput(false);
+      fetchChatrooms(true); // Refresh chatrooms list
+      
+      // Navigate to the joined chatroom
+      router.push(`/chat/${response.chatroom.id}`);
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to join chatroom');
+      if (err.message === 'Incorrect password') {
+        // Show password input if room needs password
+        setShowPasswordInput(true);
+        setError('This room is password protected. Please enter the password.');
+      } else if (err.message === 'Room not found') {
+        setError('Room not found. Please check the room code.');
+      } else {
+        setError(err.message || 'Failed to join room');
+      }
     } finally {
       setJoining(false);
     }
@@ -845,7 +862,13 @@ export default function ChatsScreen() {
         visible={showJoinModal}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setShowJoinModal(false)}
+        onRequestClose={() => {
+          setShowJoinModal(false);
+          setRoomCode('');
+          setRoomPassword('');
+          setShowPasswordInput(false);
+          setError(null);
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContainer, styles.joinModalContainer]}>
@@ -853,94 +876,81 @@ export default function ChatsScreen() {
               colors={[GoldTheme.background.card, GoldTheme.background.secondary]}
               style={styles.modalGradient}
             >
-              <Text style={styles.modalTitle}>Available Chat Rooms</Text>
+              <Text style={styles.modalTitle}>
+                {showPasswordInput ? 'Enter Room Password' : 'Join Chat Room'}
+              </Text>
 
-              {loadingAvailable ? (
-                <View style={styles.loadingAvailableContainer}>
-                  <ActivityIndicator size="large" color={GoldTheme.gold.primary} />
-                  <Text style={styles.loadingAvailableText}>Loading available rooms...</Text>
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
+
+              {!showPasswordInput ? (
+                // Step 1: Enter room code
+                <View style={styles.inputContainer}>
+                  <GoldInput
+                    label="Room Code"
+                    placeholder="Enter 6-character room code"
+                    value={roomCode}
+                    onChangeText={(text) => setRoomCode(text.toUpperCase())}
+                    maxLength={6}
+                    autoCapitalize="characters"
+                    icon={<Ionicons name="key-outline" size={20} color={GoldTheme.gold.primary} />}
+                  />
+                  <Text style={styles.inputHint}>
+                    Enter the 6-character code to join a chat room
+                  </Text>
                 </View>
               ) : (
-                <>
-                  {availableChatrooms.length > 0 ? (
-                    <FlatList
-                      data={availableChatrooms}
-                      keyExtractor={(item) => item.id}
-                      style={styles.availableChatroomsList}
-                      renderItem={({ item }) => (
-                        <View style={styles.availableChatroomItem}>
-                          <LinearGradient
-                            colors={getGoldGradient(item.name) as any}
-                            style={styles.availableChatroomAvatar}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                          >
-                            <Text style={styles.availableChatroomAvatarText}>
-                              {String(item.name || 'U').charAt(0).toUpperCase()}
-                            </Text>
-                          </LinearGradient>
-
-                          <View style={styles.availableChatroomInfo}>
-                            <Text style={styles.availableChatroomName}>{String(item.name || 'Unknown Room')}</Text>
-                            <View style={styles.availableChatroomDetails}>
-                              <View style={styles.memberInfo}>
-                                <Ionicons name="people" size={14} color={GoldTheme.gold.primary} />
-                                <Text style={styles.memberInfoText}>
-                                  {String(item.members?.length || 0)} {(item.members?.length || 0) === 1 ? 'member' : 'members'}
-                                </Text>
-                              </View>
-                              <View style={styles.createdInfo}>
-                                <Ionicons name="calendar" size={14} color={GoldTheme.text.muted} />
-                                <Text style={styles.createdInfoText}>
-                                  Created {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Unknown'}
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-
-                          <TouchableOpacity
-                            style={styles.joinButton}
-                            onPress={() => handleJoinChatroom(item.id)}
-                            disabled={joining}
-                            activeOpacity={0.8}
-                          >
-                            <LinearGradient
-                              colors={joining ? ['#888', '#666'] : GoldTheme.gradients.goldButton}
-                              style={styles.joinButtonGradient}
-                            >
-                              {joining ? (
-                                <ActivityIndicator size="small" color={GoldTheme.text.inverse} />
-                              ) : (
-                                <>
-                                  <Ionicons name="add" size={16} color={GoldTheme.text.inverse} />
-                                  <Text style={styles.joinButtonText}>Join</Text>
-                                </>
-                              )}
-                            </LinearGradient>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    />
-                  ) : (
-                    <View style={styles.noAvailableChatrooms}>
-                      <Ionicons name="globe-outline" size={48} color={GoldTheme.text.muted} />
-                      <Text style={styles.noAvailableChatroomsText}>No available rooms to join</Text>
-                      <Text style={styles.noAvailableChatroomsSubtext}>
-                        All public rooms have been joined or no rooms are available
-                      </Text>
-                    </View>
-                  )}
-                </>
+                // Step 2: Enter password
+                <View style={styles.inputContainer}>
+                  <View style={styles.roomCodeDisplay}>
+                    <Text style={styles.roomCodeLabel}>Room Code:</Text>
+                    <Text style={styles.roomCodeValue}>{roomCode}</Text>
+                  </View>
+                  <GoldInput
+                    label="Password"
+                    placeholder="Enter room password"
+                    value={roomPassword}
+                    onChangeText={setRoomPassword}
+                    secureTextEntry={true}
+                    icon={<Ionicons name="lock-closed-outline" size={20} color={GoldTheme.gold.primary} />}
+                  />
+                </View>
               )}
 
               <View style={styles.modalButtons}>
                 <GoldButton
+                  title={joining ? "Joining..." : (showPasswordInput ? "Join Room" : "Find Room")}
+                  onPress={handleJoinChatroom}
+                  disabled={joining || (!showPasswordInput && roomCode.length !== 6)}
+                  style={styles.modalButton}
+                />
+
+                {showPasswordInput && (
+                  <GoldButton
+                    title="Back"
+                    onPress={() => {
+                      setShowPasswordInput(false);
+                      setRoomPassword('');
+                      setError(null);
+                    }}
+                    variant="outline"
+                    style={styles.modalButton}
+                  />
+                )}
+
+                <GoldButton
                   title="Cancel"
                   onPress={() => {
                     setShowJoinModal(false);
-                    setAvailableChatrooms([]);
+                    setRoomCode('');
+                    setRoomPassword('');
+                    setShowPasswordInput(false);
+                    setError(null);
                   }}
-                  variant="outline"
+                  variant="secondary"
                   style={styles.modalButton}
                 />
               </View>
@@ -1297,17 +1307,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
+    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
   },
   errorText: {
-    fontSize: 16,
-    color: GoldTheme.status.error,
+    color: '#ff4444',
+    fontSize: 14,
     textAlign: 'center',
-    marginVertical: 16,
-    lineHeight: 24,
   },
   retryButton: {
     marginTop: 16,
@@ -1709,5 +1717,26 @@ const styles = StyleSheet.create({
   // Navigation disabled state
   chatroomItemDisabled: {
     opacity: 0.6,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: GoldTheme.text.secondary,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  roomCodeDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  roomCodeValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: GoldTheme.gold.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
 });
