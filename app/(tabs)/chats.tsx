@@ -5,7 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
-import { chatAPI, Chatroom } from '@/services/api';
+import { chatAPI, chatroomAPI, Chatroom } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSimpleWebSocket, WebSocketMessage } from '@/contexts/SimpleWebSocketContext';
 import { GoldButton } from '../../src/components/GoldButton';
@@ -290,7 +290,7 @@ export default function ChatsScreen() {
       setError(null);
       
       // Try to join with the room code
-      const response = await chatAPI.joinChatroomByCode(roomCode.toUpperCase(), roomPassword);
+      const response = await chatroomAPI.joinChatroomByCode(roomCode.toUpperCase(), roomPassword);
       
       // If successful, close modal and navigate
       setShowJoinModal(false);
@@ -302,14 +302,14 @@ export default function ChatsScreen() {
       // Navigate to the joined chatroom
       router.push(`/chat/${response.chatroom.id}`);
     } catch (err: any) {
-      if (err.message === 'Incorrect password') {
+      if (err.response?.data?.error === 'Incorrect password') {
         // Show password input if room needs password
         setShowPasswordInput(true);
         setError('This room is password protected. Please enter the password.');
-      } else if (err.message === 'Room not found') {
+      } else if (err.response?.data?.error === 'Room not found') {
         setError('Room not found. Please check the room code.');
       } else {
-        setError(err.message || 'Failed to join room');
+        setError(err.response?.data?.error || 'Failed to join room');
       }
     } finally {
       setJoining(false);

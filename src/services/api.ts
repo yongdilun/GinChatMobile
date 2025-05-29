@@ -668,8 +668,6 @@ export const chatAPI = {
     }
   },
 
-
-
   getConversationById: async (id: string): Promise<{ chatroom: Chatroom }> => {
     try {
       console.log(`[API] Fetching conversation with ID: ${id}`);
@@ -947,4 +945,22 @@ export const chatAPI = {
     },
     300 // 300ms debounce for auto-read operations
   ),
+};
+
+export const chatroomAPI = {
+  joinChatroomByCode: async (roomCode: string, password?: string) => {
+    try {
+      console.log('[API] Joining chatroom with code:', roomCode, password ? '(with password)' : '(no password)');
+      const response = await api.post('/chatrooms/join', { room_code: roomCode, password });
+      console.log('[API] Successfully joined chatroom:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] Failed to join chatroom:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('[API] Error status:', error.response?.status);
+        console.error('[API] Error data:', error.response?.data);
+      }
+      throw error;
+    }
+  }
 };
