@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yongdidi.GinChatMobile"
+      "package": "com.yongdidi.GinChatMobile",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -32,7 +33,8 @@
         "expo-notifications",
         {
           "color": "#FFD700",
-          "defaultChannel": "chat-messages"
+          "defaultChannel": "chat-messages",
+          "icon": "./assets/notification-icon.png"
         }
       ],
       [
@@ -41,7 +43,8 @@
           "android": {
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
-            "buildToolsVersion": "35.0.0"
+            "buildToolsVersion": "35.0.0",
+            "googleServicesFile": "./google-services.json"
           }
         }
       ]

@@ -3,34 +3,161 @@ import * as Device from 'expo-device';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Logger } from '../utils/logger';
+import Constants from 'expo-constants';
+import { firebaseApp } from '../config/firebase';
 
 // Expo push notification configuration
 const expoPushConfig = {
   projectId: 'ed9112c0-dcb5-44d5-abf9-2f85fc7baf6c',
 };
 
-// Enhanced notification handler with app state awareness
+// Configure notification handler
 Notifications.setNotificationHandler({
-  handleNotification: async (notification) => {
-    const appState = AppState.currentState;
-    const isInForeground = appState === 'active';
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
-    Logger.debug('Notification received:', {
-      title: notification.request.content.title,
-      body: notification.request.content.body,
-      data: notification.request.content.data,
-      isInForeground,
+// Configure notification channels for Android
+async function configureNotificationChannels() {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('chat-messages', {
+      name: 'Chat Messages',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FFD700',
     });
 
+    await Notifications.setNotificationChannelAsync('direct-messages', {
+      name: 'Direct Messages',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FFD700',
+    });
+
+    await Notifications.setNotificationChannelAsync('system', {
+      name: 'System Notifications',
+      importance: Notifications.AndroidImportance.DEFAULT,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FFD700',
+    });
+  }
+}
+
+// Request notification permissions
+async function requestNotificationPermissions() {
+  if (!Device.isDevice) {
+    console.warn('Push notifications are not supported in the simulator');
+    return false;
+  }
+
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+
+  if (finalStatus !== 'granted') {
+    console.warn('Failed to get push token for push notification!');
+    return false;
+  }
+
+  return true;
+}
+
+// Get push token
+async function getPushToken() {
+  try {
+    if (!Device.isDevice) {
+      throw new Error('Push notifications are not supported in the simulator');
+    }
+
+    const hasPermission = await requestNotificationPermissions();
+    if (!hasPermission) {
+      throw new Error('Notification permissions not granted');
+    }
+
+    // Get the token
+    const token = await Notifications.getExpoPushTokenAsync({
+      projectId: Constants.expoConfig?.extra?.eas?.projectId,
+    });
+
+    return token.data;
+  } catch (error) {
+    console.error('Error getting push token:', error);
+    throw error;
+  }
+}
+
+// Initialize notification service
+export async function initializeNotificationService() {
+  try {
+    // Configure notification channels
+    await configureNotificationChannels();
+    console.info('Android notification channels configured');
+
+    // Request permissions
+    const hasPermission = await requestNotificationPermissions();
+    if (hasPermission) {
+      console.info('Notification permissions granted successfully');
+    }
+
+    // Get push token
+    console.info('Requesting Expo push token...');
+    const token = await getPushToken();
+    console.info('Push token obtained successfully');
+
+    // Set up notification categories
+    await Notifications.setNotificationCategoryAsync('MESSAGE', [
+      {
+        identifier: 'REPLY',
+        buttonTitle: 'Reply',
+        options: {
+          isAuthenticationRequired: true,
+          isDestructive: false,
+        },
+      },
+    ]);
+    console.log('Notification categories set up');
+
+    // Set up notification listeners
+    const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+      console.log('Notification received:', notification);
+    });
+
+    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('Notification response:', response);
+    });
+
+    console.log('Notification listeners set up');
+
     return {
-      shouldShowAlert: !isInForeground,
-      shouldPlaySound: !isInForeground,
-      shouldSetBadge: true,
-      shouldShowBanner: !isInForeground,
-      shouldShowList: true,
+      token,
+      notificationListener,
+      responseListener,
     };
-  },
-});
+  } catch (error) {
+    console.error('Error initializing notification service:', error);
+    throw error;
+  }
+}
+
+// Clean up notification listeners
+export function cleanupNotificationListeners(listeners: {
+  notificationListener: Notifications.Subscription;
+  responseListener: Notifications.Subscription;
+}) {
+  if (listeners.notificationListener) {
+    listeners.notificationListener.remove();
+  }
+  if (listeners.responseListener) {
+    listeners.responseListener.remove();
+  }
+}
 
 export interface PushToken {
   token: string;
