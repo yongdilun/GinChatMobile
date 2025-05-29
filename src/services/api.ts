@@ -339,44 +339,52 @@ export const authAPI = {
   // Push token management
   registerPushToken: async (token: string, deviceInfo?: any) => {
     try {
-      Logger.api.info('Registering push token with server');
+      console.log('DEBUG: API - Registering push token with server');
+      console.log('DEBUG: API - Token:', token.substring(0, 20) + '...');
+      console.log('DEBUG: API - Platform:', Platform.OS);
+      console.log('DEBUG: API - Device info:', deviceInfo);
+
+      console.log('Registering push token with server');
       const response = await api.post('/auth/push-token', {
         token,
         device_info: deviceInfo,
         platform: Platform.OS,
       });
-      Logger.api.info('Push token registered successfully');
+
+      console.log('DEBUG: API - Push token registration response:', response.data);
+      console.log('Push token registered successfully');
       return response.data;
     } catch (error) {
-      Logger.api.error('Failed to register push token:', error);
+      console.error('DEBUG: API - Failed to register push token:', error);
+      console.error('Failed to register push token:', error);
       throw error;
     }
   },
 
   updatePushToken: async (token: string, deviceInfo?: any) => {
     try {
-      Logger.api.info('Updating push token with server');
+      console.log('Updating push token with server');
       const response = await api.put('/auth/push-token', {
         token,
         device_info: deviceInfo,
         platform: Platform.OS,
       });
-      Logger.api.info('Push token updated successfully');
+      console.log('Push token updated successfully');
       return response.data;
     } catch (error) {
-      Logger.api.error('Failed to update push token:', error);
+      console.error('Failed to update push token:', error);
       throw error;
     }
   },
 
   removePushToken: async () => {
     try {
-      Logger.api.info('Removing push token from server');
+      console.log('Removing push token from server');
       const response = await api.delete('/auth/push-token');
-      Logger.api.info('Push token removed successfully');
+      console.log('Push token removed successfully');
       return response.data;
     } catch (error) {
-      Logger.api.error('Failed to remove push token:', error);
+      console.error('Failed to remove push token:', error);
       throw error;
     }
   },

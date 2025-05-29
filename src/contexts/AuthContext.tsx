@@ -94,19 +94,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Initialize notifications after successful login
       try {
+        console.log('DEBUG: Starting notification initialization...');
         await notificationService.initialize();
         const pushToken = notificationService.getCurrentPushToken();
+        console.log('DEBUG: Push token obtained:', pushToken ? pushToken.substring(0, 20) + '...' : 'null');
 
         if (pushToken) {
           // Register push token with server
+          console.log('DEBUG: Registering push token with server...');
           await authAPI.registerPushToken(pushToken, {
             device_type: 'mobile',
             app_version: '1.0.0',
           });
-          Logger.auth.info('Push token registered with server');
+          console.log('DEBUG: Push token registered successfully with server');
+          console.log('Push token registered with server');
+        } else {
+          console.log('DEBUG: No push token available to register');
         }
       } catch (notificationError) {
-        Logger.auth.warn('Failed to initialize notifications:', notificationError);
+        console.error('DEBUG: Failed to initialize notifications:', notificationError);
+        console.warn('Failed to initialize notifications:', notificationError);
         // Don't fail login if notifications fail
       }
 
