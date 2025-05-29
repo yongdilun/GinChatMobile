@@ -14,8 +14,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "check:ts": "tsc --noEmit",
-    "prebuild": "expo prebuild"
+    "check:ts": "tsc --noEmit"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
