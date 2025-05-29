@@ -20,13 +20,15 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yongdidi.GinChatMobile"
+      "package": "com.yongdidi.GinChatMobile",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-router",
       [
         "expo-notifications",
