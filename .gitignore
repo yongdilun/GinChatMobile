@@ -38,7 +38,6 @@ yarn-error.*
 *.tsbuildinfo
 
 # Firebase sensitive files
-google-services.json
 GoogleService-Info.plist
 firebase.json
 

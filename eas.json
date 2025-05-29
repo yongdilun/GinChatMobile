@@ -9,8 +9,7 @@
       "distribution": "internal",
       "android": {
         "gradleCommand": ":app:assembleDebug",
-        "buildType": "apk",
-        "googleServicesFile": "./google-services.json"
+        "buildType": "apk"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "http://localhost:3000"
@@ -19,15 +18,11 @@
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk",
-        "googleServicesFile": "./google-services.json"
+        "buildType": "apk"
       }
     },
     "production": {
-      "autoIncrement": true,
-      "android": {
-        "googleServicesFile": "./google-services.json"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {
