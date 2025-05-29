@@ -44,7 +44,7 @@
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
             "buildToolsVersion": "35.0.0",
-            "googleServicesFile": "./android/app/google-services.json"
+            "googleServicesFile": "./google-services.json"
           }
         }
       ]
