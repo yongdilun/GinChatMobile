@@ -1,3 +1,4 @@
+import { initializeApp } from 'firebase/app';
 import {
   FIREBASE_PROJECT_NUMBER,
   FIREBASE_PROJECT_ID,
@@ -19,6 +20,9 @@ export const firebaseConfig = {
   appId: FIREBASE_APP_ID,
   databaseURL: FIREBASE_DATABASE_URL,
 };
+
+// Initialize Firebase
+export const firebaseApp = initializeApp(firebaseConfig);
 
 // Validate required environment variables
 const requiredVars = [
