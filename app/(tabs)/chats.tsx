@@ -901,9 +901,20 @@ export default function ChatsScreen() {
                   <Text style={styles.inputHint}>
                     Enter the 6-character code to join a chat room
                   </Text>
+                  <GoldInput
+                    label="Password (Optional)"
+                    placeholder="Enter room password if required"
+                    value={roomPassword}
+                    onChangeText={setRoomPassword}
+                    secureTextEntry={true}
+                    icon={<Ionicons name="lock-closed-outline" size={20} color={GoldTheme.gold.primary} />}
+                  />
+                  <Text style={styles.inputHint}>
+                    Leave empty if the room has no password
+                  </Text>
                 </View>
               ) : (
-                // Step 2: Enter password
+                // Step 2: Enter password (only shown if first attempt fails)
                 <View style={styles.inputContainer}>
                   <View style={styles.roomCodeDisplay}>
                     <Text style={styles.roomCodeLabel}>Room Code:</Text>
@@ -922,7 +933,7 @@ export default function ChatsScreen() {
 
               <View style={styles.modalButtons}>
                 <GoldButton
-                  title={joining ? "Joining..." : (showPasswordInput ? "Join Room" : "Find Room")}
+                  title={joining ? "Joining..." : (showPasswordInput ? "Join Room" : "Join Room")}
                   onPress={handleJoinChatroom}
                   disabled={joining || (!showPasswordInput && roomCode.length !== 6)}
                   style={styles.modalButton}
