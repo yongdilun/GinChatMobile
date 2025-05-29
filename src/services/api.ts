@@ -62,6 +62,25 @@ const handleApiError = (error: unknown) => {
       });
     }
 
+    if (statusCode === 409) {
+      // Handle conflict errors (like "already logged in on another device")
+      let errorMessage = 'Conflict error occurred.';
+
+      // Try to get error message from various possible response formats
+      if (errorData?.message) {
+        errorMessage = errorData.message;
+      } else if (errorData?.error) {
+        errorMessage = errorData.error;
+      } else if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      }
+
+      return Promise.reject({
+        status: 'conflict',
+        message: errorMessage
+      });
+    }
+
     // Handle 429 Rate Limit
     if (statusCode === 429) {
       console.warn('API Error: 429 Rate Limit Exceeded');

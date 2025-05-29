@@ -29,7 +29,14 @@ export default function LoginScreen() {
       await login(email, password);
       // No need to navigate here - AuthContext will handle it
     } catch (err: any) {
-      setError(err.message || 'Failed to login. Please try again.');
+      console.log('Login error details:', err);
+
+      // Handle specific error types
+      if (err.status === 'conflict' && err.message.includes('already logged in on another device')) {
+        setError('This account is already logged in on another device. Please logout from the other device first, or contact support if you need help.');
+      } else {
+        setError(err.message || 'Failed to login. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
