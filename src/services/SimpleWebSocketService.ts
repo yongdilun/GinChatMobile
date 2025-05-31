@@ -32,7 +32,9 @@ class SimpleWebSocketService {
   private connectionAttempts: number = 0;
   private readonly MAX_CONNECTION_ATTEMPTS = 3;
   private pendingConnection: { roomId: string; token: string; options?: WebSocketServiceOptions } | null = null;
-  private switchTimeout: NodeJS.Timeout | null = null;
+  private switchTimeout: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly HEARTBEAT_INTERVAL = 30000; // 30 seconds between heartbeats
 
   // Improved connection method with graceful room switching
   public connect(roomId: string, token: string, options?: WebSocketServiceOptions): void {
@@ -100,6 +102,12 @@ class SimpleWebSocketService {
 
     console.log("[SimpleWebSocketService] 🔄 Starting graceful room switch...");
 
+    // Clear heartbeat interval
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+
     // Disconnect current connection
     this.isManualDisconnect = true;
     if (this.ws) {
@@ -151,6 +159,10 @@ class SimpleWebSocketService {
         console.log("[SimpleWebSocketService] ✅ Connected to room:", roomId);
         this.isConnecting = false;
         this.connectionAttempts = 0; // Reset connection attempts on successful connection
+        
+        // Start heartbeat interval
+        this.startHeartbeat();
+        
         if (options?.onOpen) options.onOpen();
       };
 
@@ -193,6 +205,12 @@ class SimpleWebSocketService {
       this.ws.onclose = (event: WebSocketCloseEvent) => {
         this.isConnecting = false;
         this.ws = null;
+
+        // Clear heartbeat interval
+        if (this.heartbeatInterval) {
+          clearInterval(this.heartbeatInterval);
+          this.heartbeatInterval = null;
+        }
 
         // Only log as error if it's unexpected (not manual disconnect or room switch)
         if (this.isManualDisconnect || this.switchingRooms || event.code === 1000) {
@@ -247,6 +265,35 @@ class SimpleWebSocketService {
     }
   }
 
+  // Start heartbeat interval
+  private startHeartbeat(): void {
+    // Clear any existing heartbeat interval
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+
+    // Send initial heartbeat
+    this.sendHeartbeat();
+
+    // Set up heartbeat interval
+    this.heartbeatInterval = setInterval(() => {
+      this.sendHeartbeat();
+    }, this.HEARTBEAT_INTERVAL);
+  }
+
+  // Send heartbeat message
+  private sendHeartbeat(): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const heartbeatMessage: WebSocketMessage = {
+        type: 'heartbeat',
+        data: {
+          timestamp: new Date().toISOString()
+        }
+      };
+      this.ws.send(JSON.stringify(heartbeatMessage));
+    }
+  }
+
   // Improved disconnect method
   public disconnect(): void {
     console.log("[SimpleWebSocketService] 🔌 Disconnecting...");
@@ -254,6 +301,12 @@ class SimpleWebSocketService {
     this.isConnecting = false;
     this.switchingRooms = false;
     this.connectionAttempts = 0; // Reset connection attempts on manual disconnect
+
+    // Clear heartbeat interval
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
 
     // Clear any pending connections and timeouts
     this.pendingConnection = null;
